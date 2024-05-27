@@ -5,7 +5,7 @@ import constants as c
 import os
 
 
-def clean_value_csv(value):
+def clean_value(value):
     """Cleans the input value by stripping unwanted characters and converting to int if possible."""
     if pd.isna(value):
         return value
@@ -16,79 +16,65 @@ def clean_value_csv(value):
         return cleaned_value
 
 
-def clean_dataframe_csv(file_path):
-    """
-    Reads the CSV file at file_path into a DataFrame, cleans it,
-    and returns the cleaned DataFrame.
-    """
-    df = pd.read_csv(file_path, index_col=False)
-    for column in df.columns:
-        df[column] = df[column].apply(clean_value_csv)
+def clean_dataframe(filepath, file_type='csv'):
+    """Reads a file into a DataFrame, cleans it, and returns the cleaned DataFrame."""
+    read_function = pd.read_csv if file_type == 'csv' else pd.read_excel
+    df = read_function(filepath, index_col=False, engine='openpyxl' if file_type == 'excel' else None)
+    for col in df.columns:
+        df[col] = df[col].apply(clean_value)
     return df
 
 
-def clean_value_xl(value):
-    """
-    Cleans the input value by stripping unwanted characters.
-    If the value can be converted to int, it returns int, otherwise returns the cleaned string.
-    """
-    if pd.isna(value):
-        return value
-    cleaned_value = str(value).strip('="')
-    try:
-        return int(cleaned_value)
-    except ValueError:
-        return cleaned_value
-
-
-def clean_dataframe_xl(file_path):
-    """
-    Reads the Excel file at file_path into a DataFrame, cleans it,
-    and returns the cleaned DataFrame.
-    """
-    df = pd.read_excel(file_path, index_col=False, engine='openpyxl')
-    for column in df.columns:
-        df[column] = df[column].apply(clean_value_xl)
-    return df
-
-
-def clean_csv(file):
-    base_dir = 'cleaned_data'
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
-    cleaned_df = clean_dataframe_csv(file)
-
-    cleaned_df.to_csv(f'cleaned_{file}', index=False)
+def clean_and_save(filepath, output_dir='cleaned_data', file_type='csv'):
+    """Cleans the file at filepath and saves the cleaned DataFrame."""
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    cleaned_df = clean_dataframe(filepath, file_type)
+    output_file_path = os.path.join(output_dir, f'cleaned_{os.path.basename(filepath)}')
+    if file_type == 'csv':
+        cleaned_df.to_csv(output_file_path, index=False)
+    else:
+        cleaned_df.to_excel(output_file_path, index=False)
     return cleaned_df
 
 
 class NeuroFinder:
     def __init__(self, neurofinder_path: str):
         self.neurofinder_path = neurofinder_path
-        self.neurofinder_db = clean_dataframe_xl(self.neurofinder_path)
+        self.neurofinder_db = clean_dataframe(self.neurofinder_path, 'excel')
         self.name_regulator = NameRegulator()
-        self.new_db = self.create_new_db()
+        self.new_db = pd.DataFrame(columns=self.neurofinder_db.columns.tolist())
 
-    def normalize_column_category(self, column_data: str) -> pd:
+    def normalize_column_category(self, column_data):
+        """Normalizes the names in a given column of the DataFrame."""
         return column_data.apply(lambda x: self.name_regulator.normalize(x) if isinstance(x, str) else '')
 
-    def create_new_db(self) -> pd.DataFrame:
-        columns = self.neurofinder_db.columns.tolist()
-        return pd.DataFrame(columns=columns)
+    def is_company_in_db(self, company_name, db):
+        """Checks if a company is already in the given database."""
+        normalized_name = self.name_regulator.normalize(company_name)
+        current_names = self.normalize_column_category(db['Company_Name'])
+        former_names = self.normalize_column_category(db.get('Former Company Names', pd.Series([])))
+        return any((current_names == normalized_name) | (former_names == normalized_name))
 
-    def is_company_in_main_db(self, company_name: str) -> bool:
-        """Returns True of company name are already in the database, otherwise returns False"""
-        company_name = self.name_regulator.normalize(company_name)
+    def add_company_to_db(self, company_info, db_name='new'):
+        """Adds a new company entry to the specified database."""
+        db = self.new_db if db_name == "new" else self.neurofinder_db
+        db = pd.concat([db, pd.DataFrame([company_info])], ignore_index=True)
+        if db_name == 'new':
+            self.new_db = db
+        else:
+            self.neurofinder_db = db
 
-        current_names = self.normalize_column_category(self.neurofinder_db['Company_Name'])
-        former_names = self.normalize_column_category(self.neurofinder_db['former company names'])
-        return any((current_names == company_name) | (former_names == company_name))
-
-    def is_company_in_new_db(self, company_name: str) -> bool:
-        company_name = self.name_regulator.normalize(company_name)
-        current_names = self.normalize_column_category(self.new_db['Company_Name'])
-        former_names = self.normalize_column_category(self.new_db['former company names'])
-        return any((current_names == company_name) | (former_names == company_name))
+    def process_company_files(self, files, db_name='new'):
+        """Processes company files, adding new entries to the database."""
+        for file_path in files:
+            cleaned_df = clean_and_save(file_path, file_type='csv' if file_path.endswith('.csv') else 'excel')
+            for _, row in cleaned_df.iterrows():
+                company_name = row.get("Name", "")
+                if company_name and not self.is_company_in_db(company_name,
+                                                              self.neurofinder_db) and not self.is_company_in_db(
+                        company_name, self.new_db):
+                    self.add_company_to_db(row.to_dict(), db_name)
 
     def handle_the_start_up_nation(self, key_words: list):
         for file in key_words:
@@ -171,6 +157,8 @@ class NeuroFinder:
 
 
 if __name__ == "__main__":
-    n = NeuroFinder('data/ֿNeuroTech Industry IL 2023.xlsx')
-    n.export_new_db()
-    n.check_overlap()
+    neurofinder = NeuroFinder('data/ֿNeuroTech Industry IL 2023.xlsx')
+
+    neurofinder.process_company_files(['data/startup_nation.csv', 'data/cb_info.csv'])
+    neurofinder.export_new_db()
+    neurofinder.check_overlap()
