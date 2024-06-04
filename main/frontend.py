@@ -2,18 +2,21 @@
 This module provides a GUI for uploading CSV and Excel files.
 """
 
-from DbHandler import DbHandler, clean_dataframe
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from tkinterdnd2 import TkinterDnD, DND_FILES
 import pandas as pd
+from tkinterdnd2 import TkinterDnD, DND_FILES
+from main.db_handler import DbHandler, clean_dataframe
 
-# File types
-file_types = ["tsun", "cb", "pb", "other"]
+
+# Constants
+MAIN_DB_PATH = 'main/new.xlsx'
+FILE_TYPES = ["tsun", "cb", "pb", "other"]
 uploaded_files = []
 type_list = []
 
-new_db = pd.DataFrame(columns=clean_dataframe("data\ֿNeuroTech Industry IL 2023.xlsx", 'excel').columns.tolist())
+
+new_db = pd.DataFrame(columns=clean_dataframe(MAIN_DB_PATH, 'excel').columns.tolist())
 new_db.to_excel('main/new.xlsx', sheet_name='new')
 
 def read_file(filepath):
@@ -21,29 +24,34 @@ def read_file(filepath):
     Reads a file and updates the uploaded file list.
     """
     if filepath.endswith('.csv'):
-        df = pd.read_csv(filepath)
+        pd.read_csv(filepath)
     elif filepath.endswith('.xlsx'):
-        df = pd.read_excel(filepath)
+        pd.read_excel(filepath)
     else:
         messagebox.showerror("Error", "Unsupported file format.")
         return
-    uploaded_files.append({"path": filepath, "type": tk.StringVar(value="other")})
+    uploaded_files.append({"path": filepath, "data_type": tk.StringVar(value="other")})
     update_file_list()
 
 def update_file_list():
     """
     Updates the displayed list of uploaded files.
     """
+    if not uploaded_files:
+        messagebox.showerror("Error", "No files to upload")
+        return
     for widget in file_list_frame.winfo_children():
         widget.destroy()
+
     for i, file_info in enumerate(uploaded_files):
         file_path = file_info["path"]
-        file_type_var = file_info["type"]
+        file_type_var = file_info["data_type"]
 
         file_label = ttk.Label(file_list_frame, text=file_path.split('/')[-1])
         file_label.grid(row=i, column=0, padx=5, pady=5)
 
-        type_menu = ttk.OptionMenu(file_list_frame, file_type_var, file_type_var.get(), *file_types)
+
+        type_menu = ttk.OptionMenu(file_list_frame, file_type_var, file_type_var.get(), *FILE_TYPES)
         type_menu.grid(row=i, column=1, padx=5, pady=5)
 
         delete_button = ttk.Button(file_list_frame,
@@ -56,7 +64,6 @@ def delete_file(index):
     Deletes a file from the uploaded file list.
     """
     del uploaded_files[index]
-    del df_list[index]
     update_file_list()
 
 def open_file_dialog():
@@ -85,18 +92,17 @@ def upload_all_files():
         messagebox.showerror("Error", "No files to upload.")
         return
     for file_info in uploaded_files:
-        type = file_info['type'].get()
+        data_type = file_info['data_type'].get()
         file_path = file_info['path']
-        print(f"Uploading {file_path} as {type}")
-        handle_dfs("data\ֿNeuroTech Industry IL 2023.xlsx", file_path, type)
-    messagebox.showinfo("Success", "All files uploaded successfully!") 
+        print(f"Uploading {file_path} as {data_type}")
+        handle_dfs(MAIN_DB_PATH, file_path, data_type)
+    messagebox.showinfo("Success", "All files uploaded successfully!")
 
-def handle_dfs(main_db:str, file_path:str, type:str):
-    """handels dfs"""
-    for file in uploaded_files:
-        tsun = DbHandler(main_db, file_path, type)
-        print(tsun.type)
-        tsun.handle_tsun()
+def handle_dfs(main_db:str, file_path:str, data_type:str):
+    """Handles data frames based on the provided database, file path, and data type."""
+    tsun = DbHandler(main_db, file_path, data_type)
+    print(tsun.data_type)
+    tsun.start_process()
 
 root = TkinterDnD.Tk()
 root.title("File Upload GUI")

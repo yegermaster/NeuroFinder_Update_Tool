@@ -1,10 +1,11 @@
-import os
+"""
+This module provides functions for realzing the automating tool algortheim.
+"""
+
 import re
+import os
 import unicodedata
 import pandas as pd
-
-
-
 
 
 def clean_value(value):
@@ -21,7 +22,8 @@ def clean_value(value):
 def clean_dataframe(filepath, file_type='csv'):
     """Reads a file into a DataFrame, cleans it, and returns the cleaned DataFrame."""
     read_function = pd.read_csv if file_type == 'csv' else pd.read_excel
-    df = read_function(filepath, index_col=False, engine='openpyxl' if file_type == 'excel' else None)
+    df = read_function(filepath, index_col=False,
+                   engine='openpyxl' if file_type == 'excel' else None)
     for col in df.columns:
         df[col] = df[col].apply(clean_value)
     return df
@@ -42,10 +44,11 @@ def clean_and_save(filepath, output_dir='cleaned_data', file_type='csv'):
 
 class DbHandler:
     """Represents a single file that has been uploaded"""
-    def __init__(self, main_db:str, file_path:str, data_type:str):
+    def __init__(self, main_db: str, file_path: str, data_type: str) -> str:
         self.file_path = file_path
         self.data_type = data_type
-        self.main_db=main_db
+        self.main_db = main_db
+        self.df = None
         self.new_db = ''
 
     def generate_new_file(self):
@@ -60,7 +63,7 @@ class DbHandler:
             self.handle_other()
         else:
             return False
-        
+
     def normalize(self, name: str) -> str:
         """Normalzies a given name string"""
         if not isinstance(name, str):
@@ -70,7 +73,7 @@ class DbHandler:
         name = re.sub(r'[^a-z0-9 ]', '', name)
         name = re.sub(r'\s+', ' ', name)
         return name
-        
+    
     def normalize_column_category(self, column_data):
         """Normalizes the names in a given column of the DataFrame."""
         return column_data.apply(lambda x: self.normalize(x) if isinstance(x, str) else '')
@@ -79,14 +82,26 @@ class DbHandler:
         """Checks if a company is already in the given database."""
         normalized_name = self.normalize(company_name)
         current_names = self.normalize_column_category(self.main_db['Company_Name'])
-        former_names = self.normalize_column_category(self.main_db.get('Former Company Names', pd.Series([])))
+        former_names = self.normalize_column_category(self.main_db.get('Former Company Names',
+                                                                        pd.Series([])))
         return any((current_names == normalized_name) | (former_names == normalized_name))
+    
+    def start_process(self):
+        """Start the process of the algortheim"""
+        self.df = clean_dataframe(self.file_path)
+        if self.data_type == 'tsun':
+            self.handle_tsun()
+        elif self.data_type == 'cb':
+            self.handle_cb()
+        elif self.data_type == 'pb':
+            self.handle_pb()
+        else:
+            self.handle_other()
 
     def handle_tsun(self):
         """Handles the start up central data"""
         print("in handle tsun")
-        cleaned_df = clean_dataframe(os.path.join('data', self.file_path))
-        print(cleaned_df)
+        """
         for _, row in cleaned_df.iterrows():
             company_name = row['Name']
             description = row['Description']
@@ -106,20 +121,16 @@ class DbHandler:
                 self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])], ignore_index=True)
         print('the start up nation uploaded')
         return self.new_db
-    
+    """  
     def handle_cb(self):
         """Handles crunchbase data"""
-        pass
+        print("handle_cb")
 
     def handle_pb(self):
         """Handles pitchbook data"""
-        pass
+        print("handle_pb")
+
 
     def handle_other(self):
         """Handles other data"""
-        pass
-
-
-
-handler = DbHandler("main_db", "file_path", "data_type")
-print(handler.file_path)
+        print("handle_other")
