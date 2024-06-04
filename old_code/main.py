@@ -1,7 +1,7 @@
 import pandas as pd
-from name_regulator import NameRegulator
+from old_code.name_regulator import NameRegulator
 import csv
-import constants as c
+import old_code.constants as c
 import os
 
 
