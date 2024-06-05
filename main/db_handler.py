@@ -44,25 +44,11 @@ def clean_and_save(filepath, output_dir='cleaned_data', file_type='csv'):
 
 class DbHandler:
     """Represents a single file that has been uploaded"""
-    def __init__(self, main_db: str, file_path: str, data_type: str) -> str:
-        self.file_path = file_path
-        self.data_type = data_type
-        self.main_db = main_db
+    def __init__(self, main_db_path: str):
+        self.main_db = pd.read_excel(main_db_path)
         self.df = None
-        self.new_db = ''
+        self.new_db = pd.DataFrame(columns=self.main_db.columns.tolist())
 
-    def generate_new_file(self):
-        """Sends to new compnies to the new file"""
-        if self.data_type=="tsun":
-            self.handle_tsun()
-        elif self.data_type=="cb":
-            self.handle_cb()
-        elif self.data_type=="pb":
-            self.handle_pb()
-        elif self.data_type == "other":
-            self.handle_other()
-        else:
-            return False
 
     def normalize(self, name: str) -> str:
         """Normalzies a given name string"""
@@ -86,23 +72,31 @@ class DbHandler:
                                                                         pd.Series([])))
         return any((current_names == normalized_name) | (former_names == normalized_name))
     
-    def start_process(self):
+    def is_company_in_new_db(self, company_name):
+        """Checks if a company is already in the given database."""
+        normalized_name = self.normalize(company_name)
+        current_names = self.normalize_column_category(self.new_db['Company_Name'])
+        return any(current_names == normalized_name)
+    
+    def export(self, path):
+        self.new_db.to_excel(path, index=False)
+
+    def start_process(self, file_path: str, data_type: str):
         """Start the process of the algortheim"""
-        self.df = clean_dataframe(self.file_path)
-        if self.data_type == 'tsun':
+        self.df = clean_dataframe(file_path)
+        if data_type == 'tsun':
             self.handle_tsun()
-        elif self.data_type == 'cb':
+        elif data_type == 'cb':
             self.handle_cb()
-        elif self.data_type == 'pb':
+        elif data_type == 'pb':
             self.handle_pb()
         else:
             self.handle_other()
 
     def handle_tsun(self):
         """Handles the start up central data"""
-        print("in handle tsun")
-        """
-        for _, row in cleaned_df.iterrows():
+
+        for _, row in self.df.iterrows():
             company_name = row['Name']
             description = row['Description']
             website = row['Finder URL']
@@ -110,21 +104,44 @@ class DbHandler:
             employees = row['Employees']
             funding_stage = row['Funding Stage']
             if not self.is_company_in_main_db(company_name):
-                new_entry = {
-                    'Company_Name': company_name,
-                    'Startup Nation Page': website,
-                    'Company_Founded_Year': year_founded,
-                    'Company_Number_of_Employees': employees,
-                    'Funding_Status': funding_stage,
-                    'Description': description
-                    }
-                self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])], ignore_index=True)
+                if not self.is_company_in_new_db(company_name):
+                    new_entry = pd.Series({
+                        'Company_Name': company_name,
+                        'Startup Nation Page': website,
+                        'Company_Founded_Year': year_founded,
+                        'Company_Number_of_Employees': employees,
+                        'Funding_Status': funding_stage,
+                        'Description': description
+                    })
+                    self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])],
+                                            ignore_index=True)
         print('the start up nation uploaded')
-        return self.new_db
-    """  
+
     def handle_cb(self):
         """Handles crunchbase data"""
-        print("handle_cb")
+        for _, row in self.df.iterrows():
+            company_name = row['Organization Name']
+            description = row['Description']
+            full_description = row['Full Description']
+            website = row['Organization Name URL']
+            year_founded = row['Founded Date']
+            cb_rank = row['CB Rank (Company)']
+            headquarters = row['Headquarters Location']
+            if not self.is_company_in_main_db(company_name):
+                if not self.is_company_in_new_db(company_name):
+                    new_entry = {
+                        'Company_Name': company_name,
+                        'CB (Crunchbase) Link': website,
+                        'Company_Founded_Year': year_founded,
+                        'Company_Location': headquarters,
+                        'Description': description,
+                        'Full Description': full_description,
+                        'Company_CB_Rank': cb_rank
+                        }
+                    self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])],
+                                             ignore_index=True)
+        print('cb has uploaded')
+
 
     def handle_pb(self):
         """Handles pitchbook data"""

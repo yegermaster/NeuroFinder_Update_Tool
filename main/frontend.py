@@ -6,18 +6,16 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 from tkinterdnd2 import TkinterDnD, DND_FILES
-from main.db_handler import DbHandler, clean_dataframe
+from db_handler import DbHandler
 
 
 # Constants
-MAIN_DB_PATH = 'main/new.xlsx'
+MAIN_DB_PATH = 'main/main_database.xlsx'
 FILE_TYPES = ["tsun", "cb", "pb", "other"]
 uploaded_files = []
 type_list = []
+db_handler = DbHandler(MAIN_DB_PATH)
 
-
-new_db = pd.DataFrame(columns=clean_dataframe(MAIN_DB_PATH, 'excel').columns.tolist())
-new_db.to_excel('main/new.xlsx', sheet_name='new')
 
 def read_file(filepath):
     """
@@ -95,14 +93,13 @@ def upload_all_files():
         data_type = file_info['data_type'].get()
         file_path = file_info['path']
         print(f"Uploading {file_path} as {data_type}")
-        handle_dfs(MAIN_DB_PATH, file_path, data_type)
+        db_handler.start_process(file_path, data_type)
     messagebox.showinfo("Success", "All files uploaded successfully!")
 
-def handle_dfs(main_db:str, file_path:str, data_type:str):
-    """Handles data frames based on the provided database, file path, and data type."""
-    tsun = DbHandler(main_db, file_path, data_type)
-    print(tsun.data_type)
-    tsun.start_process()
+def export_all_files():
+    """Exports files to exce;"""
+    db_handler.export('main/new1.xlsx')
+    print("exported")
 
 root = TkinterDnD.Tk()
 root.title("File Upload GUI")
@@ -141,6 +138,9 @@ file_list_frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
 
 final_upload_button = ttk.Button(root, text="Upload All Files", command=upload_all_files)
 final_upload_button.pack(pady=20)
+
+export_button = ttk.Button(root, text="Export", command=export_all_files)
+export_button.pack(pady=20)
 
 frame.drop_target_register(DND_FILES)
 frame.dnd_bind('<<Drop>>', drop)
