@@ -44,8 +44,9 @@ def clean_and_save(filepath, output_dir='cleaned_data', file_type='csv'):
 
 class DbHandler:
     """Represents a single file that has been uploaded"""
-    def __init__(self, main_db_path: str):
+    def __init__(self, main_db_path: str, not_neuro_tech_path:str):
         self.main_db = pd.read_excel(main_db_path)
+        self.not_neurotech_db = pd.read_excel(not_neuro_tech_path)
         self.df = None
         self.new_db = pd.DataFrame(columns=self.main_db.columns.tolist())
 
@@ -78,8 +79,15 @@ class DbHandler:
         current_names = self.normalize_column_category(self.new_db['Company_Name'])
         return any(current_names == normalized_name)
     
+
+
     def export(self, path):
+        """Exports new database to excel"""
         self.new_db.to_excel(path, index=False)
+    
+    def clear_new_db(self):
+        """Clears new database"""
+        self.new_db = pd.DataFrame(columns=self.main_db.columns.tolist())
 
     def start_process(self, file_path: str, data_type: str):
         """Start the process of the algortheim"""
@@ -93,9 +101,14 @@ class DbHandler:
         else:
             self.handle_other()
 
-    def handle_tsun(self):
-        """Handles the start up central data"""
+    def is_company_not_neurotech(self, company_name):
+        """Checks if a company is listed in the not neurotech database."""
+        normalized_name = self.normalize(company_name)
+        current_names = self.normalize_column_category(self.not_neurotech_db['Company_Name'])
+        return any(current_names == normalized_name)
 
+    def handle_tsun(self):
+        """Handles the startup central data"""
         for _, row in self.df.iterrows():
             company_name = row['Name']
             description = row['Description']
@@ -103,19 +116,19 @@ class DbHandler:
             year_founded = row['Founded']
             employees = row['Employees']
             funding_stage = row['Funding Stage']
-            if not self.is_company_in_main_db(company_name):
-                if not self.is_company_in_new_db(company_name):
-                    new_entry = pd.Series({
-                        'Company_Name': company_name,
-                        'Startup Nation Page': website,
-                        'Company_Founded_Year': year_founded,
-                        'Company_Number_of_Employees': employees,
-                        'Funding_Status': funding_stage,
-                        'Description': description
-                    })
-                    self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])],
-                                            ignore_index=True)
-        print('the start up nation uploaded')
+            condition_1 = self.is_company_in_main_db(company_name)
+            condition_2 = self.is_company_not_neurotech(company_name)
+            condition_3 = self.is_company_in_new_db(company_name)
+            if not condition_1 and not condition_2 and not condition_3:
+                new_entry = pd.Series({
+                    'Company_Name': company_name,
+                    'Startup Nation Page': website,
+                    'Company_Founded_Year': year_founded,
+                    'Company_Number_of_Employees': employees,
+                    'Funding_Status': funding_stage,
+                    'Description': description
+                })
+                self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])], ignore_index=True)
 
     def handle_cb(self):
         """Handles crunchbase data"""
@@ -127,20 +140,20 @@ class DbHandler:
             year_founded = row['Founded Date']
             cb_rank = row['CB Rank (Company)']
             headquarters = row['Headquarters Location']
-            if not self.is_company_in_main_db(company_name):
-                if not self.is_company_in_new_db(company_name):
-                    new_entry = {
-                        'Company_Name': company_name,
-                        'CB (Crunchbase) Link': website,
-                        'Company_Founded_Year': year_founded,
-                        'Company_Location': headquarters,
-                        'Description': description,
-                        'Full Description': full_description,
-                        'Company_CB_Rank': cb_rank
-                        }
-                    self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])],
-                                             ignore_index=True)
-        print('cb has uploaded')
+            condition_1 = self.is_company_in_main_db(company_name)
+            condition_2 = self.is_company_not_neurotech(company_name)
+            condition_3 = self.is_company_in_new_db(company_name)
+            if not condition_1 and not condition_2 and not condition_3:
+                new_entry = {
+                    'Company_Name': company_name,
+                    'CB (Crunchbase) Link': website,
+                    'Company_Founded_Year': year_founded,
+                    'Company_Location': headquarters,
+                    'Description': description,
+                    'Full Description': full_description,
+                    'Company_CB_Rank': cb_rank
+                }
+                self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])], ignore_index=True)
 
 
     def handle_pb(self):
