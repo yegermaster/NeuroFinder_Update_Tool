@@ -1,7 +1,7 @@
 """
 This module provides a GUI for uploading CSV and Excel files.
 """
-
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
@@ -119,59 +119,52 @@ def update_loaded_list():
 
         file_label = ttk.Label(loaded_list_frame, text=file_path.split('/')[-1])
         file_label.grid(row=i, column=0, padx=5, pady=5)
+# Initialize the root window with customtkinter style
+ctk.set_appearance_mode("System")  # Modes: "System" (default), "Light", "Dark"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
 
 root = TkinterDnD.Tk()
 root.title("File Upload GUI")
 root.geometry("600x600")
-root.config(bg="#13b013")
 
-style = ttk.Style()
-style.configure('TLabel', background='#2e352e', font=("Arial", 12))
-style.configure('TButton', font=("Arial", 12))
-style.configure('TFrame', background='#017002')
+# Main header
+header = ctk.CTkLabel(root, text="Upload Files", font=("Arial", 16), fg_color="green", text_color="white", anchor="center")
+header.pack(fill="x", pady=10)
 
-header = ttk.Label(root,
-                    text="Upload Files",
-                    background="#8bf33b",
-                    foreground="white",
-                    font=("Arial", 16),
-                    anchor="center"
-                    )
-header.pack(fill=tk.X, pady=10)
+# Drag and drop frame
+drag_frame = ctk.CTkFrame(root, width=400, height=200, corner_radius=10)
+drag_frame.pack(pady=20)
+drag_frame.pack_propagate(False)
 
-frame = ttk.Frame(root, width=400, height=200, relief=tk.RAISED, borderwidth=2)
-frame.pack(pady=20)
-frame.pack_propagate(False)
-
-final_upload_button = ttk.Button(root, text="Upload All Files", command=upload_all_files)
-final_upload_button.pack(pady=20)
-
-export_button = ttk.Button(root, text="Export", command=export_all_files)
-export_button.pack(pady=20)
-
-drag_label = ttk.Label(frame, text="Drag files here", font=("Arial", 14), anchor="center")
-drag_label.pack(expand=True)
-
-upload_button = ttk.Button(root, text="Upload File", command=open_file_dialog)
+upload_button = ctk.CTkButton(drag_frame, text="Upload File or Drag files here", command=open_file_dialog)
 upload_button.pack(pady=10)
 
-# Section for files loading to load
-loading_label = ttk.Label(root, text="Files ready to Load:", anchor="w")
+# Button frame
+button_frame = ctk.CTkFrame(root, width=600, height=100, corner_radius=10)
+button_frame.pack(pady=20)
+button_frame.pack_propagate(False)
+
+final_upload_button = ctk.CTkButton(button_frame, text="Load All Files", command=upload_all_files)
+final_upload_button.pack(pady=5)
+
+export_button = ctk.CTkButton(button_frame, text="Export", command=export_all_files)
+export_button.pack(pady=5)
+
+# Section for files ready to load
+loading_label = ctk.CTkLabel(root, text="Files ready to Load:", anchor="w")
 loading_label.pack(anchor="w", padx=20)
 
-loading_list_frame = ttk.Frame(root)
-loading_list_frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+loading_list_frame = ctk.CTkFrame(root)
+loading_list_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
 # Section for files already loaded
-loaded_label = ttk.Label(root, text="Files Already Loaded:", anchor="w")
+loaded_label = ctk.CTkLabel(root, text="Files Already Loaded:", anchor="w")
 loaded_label.pack(anchor="w", padx=20)
 
-loaded_list_frame = ttk.Frame(root)
-loaded_list_frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+loaded_list_frame = ctk.CTkFrame(root)
+loaded_list_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
-
-
-frame.drop_target_register(DND_FILES)
-frame.dnd_bind('<<Drop>>', drop)
+drag_frame.drop_target_register(DND_FILES)
+drag_frame.dnd_bind('<<Drop>>', drop)
 
 root.mainloop()
