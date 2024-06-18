@@ -79,8 +79,6 @@ class DbHandler:
         current_names = self.normalize_column_category(self.new_db['Company_Name'])
         return any(current_names == normalized_name)
     
-
-
     def export(self, path):
         """Exports new database to excel"""
         self.new_db.to_excel(path, index=False)
@@ -88,6 +86,20 @@ class DbHandler:
     def clear_new_db(self):
         """Clears new database"""
         self.new_db = pd.DataFrame(columns=self.main_db.columns.tolist())
+
+    def validate_file_type(self, file_path: str, data_type: str) -> bool:
+        """Validates if the file content matches the specified data type."""
+        self.df = clean_dataframe(file_path)
+        required_columns = {
+            'tsun': ['Finder URL'],
+            'cb': ['CB Rank (Company)'],
+            'pb': ['PitchBook special column'],  # Update with actual columns if known
+            'other': ['other format special column']  # Update with actual columns if known
+        }
+        if data_type not in required_columns:
+            return False
+        return all(col in self.df.columns for col in required_columns[data_type])
+
 
     def start_process(self, file_path: str, data_type: str):
         """Start the process of the algortheim"""
@@ -155,11 +167,9 @@ class DbHandler:
                 }
                 self.new_db = pd.concat([self.new_db, pd.DataFrame([new_entry])], ignore_index=True)
 
-
     def handle_pb(self):
         """Handles pitchbook data"""
         print("handle_pb")
-
 
     def handle_other(self):
         """Handles other data"""

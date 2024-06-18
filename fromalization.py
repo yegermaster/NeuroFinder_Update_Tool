@@ -16,7 +16,14 @@ Dependencies:
 """
 
 import pandas as pd
+from main.constants import location_dict
 
+def standardize_location(location):
+    """
+    Standardize location names using a predefined dictionary.
+    """
+    standardized_locations  = location_dict
+    return standardized_locations.get(location, location)
 
 
 def formalize_company_name(name:str)->str:
@@ -48,26 +55,35 @@ def format_logo_in_visualization_folder(value:str)->str:
     else:
         return "FALSE"
 
-def apply_formalization(file_path):
+def apply_formalization(file_path:str)->pd.DataFrame:
     """Applys formalization for all coulmns"""
     # Load the Excel file
-    file = pd.read_excel(file_path)
+    df = pd.read_excel(file_path)
 
     # Formalize Company_Name column
     col = "Company_Name"
-    file[col] = file[col].apply(formalize_company_name)
+    df[col] = df[col].apply(formalize_company_name)
+
+    # Formalize Company_Location column
+    col = 'Company_Location'
+    df[col] = df[col].apply(standardize_location)
 
     # Formalize Company_Name column "Logo in Visualization folder?" column
     col = "Logo in Visualization folder?"
-    file[col] = file[col].apply(format_logo_in_visualization_folder)
+    df[col] = df[col].apply(format_logo_in_visualization_folder)
 
     # Formalize Company_Name column Updating_Date column
     col = 'Updating_Date'
-    file[col] = file[col].apply(format_date)
+    df[col] = df[col].apply(format_date)
 
-    # Save the changes to a new Excel file
-    output_path = "main/formalized_main_db.xlsx"
-    file.to_excel(output_path, index=False)
+    return df
 
-    file_path = "main/main_db.xlsx"
-    apply_formalization(file_path)
+def export_file(file_path:str, df:pd.DataFrame):
+    """Exports file to file path"""
+    df.to_excel(file_path, index=False)
+
+PATH = "main/main_db.xlsx"
+formalized_file = apply_formalization(PATH)
+
+NEW_PATH = "formalize.xlsx"
+export_file(NEW_PATH, formalized_file)

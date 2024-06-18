@@ -1,3 +1,27 @@
+"""
+File Upload GUI Application
+
+This module provides a backend to the GUI application to upload,
+process, and manage CSV and Excel files.
+
+Modules:
+    customtkinter: Custom Tkinter for enhanced UI components.
+    tkinter: Standard Tkinter library.
+    pandas: Data handling library.
+    tkinterdnd2: Drag and drop functionality for Tkinter.
+    db_handler: Custom database handler module for processing files.
+
+Functions:
+    read_file(filepath): Reads the file and updates the loading list.
+    update_loading_list(): Updates the UI with the current loading files.
+    delete_loading_file(index): Deletes a file from the loading list.
+    open_file_dialog(): Opens a file dialog to select a file.
+    drop(event): Handles the file drop event.
+    upload_all_files(): Uploads all files to the database.
+    export_all_files(): Exports all loaded files to an Excel file.
+    update_loaded_list(): Updates the UI with the currently loaded files.
+"""
+
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import pandas as pd
@@ -12,7 +36,8 @@ loading_files = []
 loaded_files = []
 db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_PATH)
 
-def read_file(filepath):
+def read_file(filepath:str) -> None:
+    """Reads the file and updates the loading"""
     if filepath.endswith('.csv'):
         pd.read_csv(filepath)
     elif filepath.endswith('.xlsx'):
@@ -23,7 +48,8 @@ def read_file(filepath):
     loading_files.append({"path": filepath, "data_type": ctk.StringVar(value="tsun")})
     update_loading_list()
 
-def update_loading_list():
+def update_loading_list() -> None:
+    """Updates the UI with the current loading files."""
     for widget in loading_list_frame.winfo_children():
         widget.destroy()
     for i, file_info in enumerate(loading_files):
@@ -36,22 +62,26 @@ def update_loading_list():
         delete_button = ctk.CTkButton(loading_list_frame, text="Delete", command=lambda idx=i: delete_loading_file(idx))
         delete_button.grid(row=i, column=2, padx=5, pady=5)
 
-def delete_loading_file(index):
+def delete_loading_file(index: int) -> None:
+    """Deletes a file from the loading list"""
     del loading_files[index]
     update_loading_list()
 
-def open_file_dialog():
+def open_file_dialog() -> None:
+    """Opens a file dialog to select a file."""
     filepath = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"), ("Excel files", "*.xlsx")])
     if filepath:
         read_file(filepath)
 
-def drop(event):
+def drop(event: any) -> None:
+    """Handles the file drop event."""
     filepath = event.data
     if filepath:
         filepath = filepath.strip('{}')
         read_file(filepath)
 
-def upload_all_files():
+def upload_all_files() -> None:
+    """Uploads all files to the database."""
     if not loading_files:
         messagebox.showerror("Error", "No files to upload.")
         return
@@ -65,14 +95,16 @@ def upload_all_files():
     update_loaded_list()
     messagebox.showinfo("Success", "All files uploaded successfully!")
 
-def export_all_files():
+def export_all_files() -> None:
+    """Exports all loaded file to and Excel file."""
     if not loaded_files:
         messagebox.showerror("Error", "No files to export.")
         return
     db_handler.export('main/new1.xlsx')
     messagebox.showinfo("Success", "All files exported successfully")
 
-def update_loaded_list():
+def update_loaded_list() -> None:
+    "Upadtes the UI with the currently loaded files."
     for widget in loaded_list_frame.winfo_children():
         widget.destroy()
     for i, file_info in enumerate(loaded_files):

@@ -1,9 +1,9 @@
 """
 This module provides a GUI for uploading CSV and Excel files.
 """
-import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import customtkinter as ctk
 import pandas as pd
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from db_handler import DbHandler
@@ -18,7 +18,7 @@ loaded_files = []
 db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_PATH)
 
 
-def read_file(filepath):
+def read_file(filepath:str):
     """
     Reads a file and updates the loading file list.
     """
@@ -56,7 +56,7 @@ def update_loading_list():
                                     command=lambda idx=i: delete_loading_file(idx))
         delete_button.grid(row=i, column=2, padx=5, pady=5)
 
-def delete_loading_file(index):
+def delete_loading_file(index: int):
     """
     Deletes a file from the loading file list.
     """
@@ -72,7 +72,7 @@ def open_file_dialog():
     if filepath:
         read_file(filepath)
 
-def drop(event):
+def drop(event: any):
     """
     Handles file drop events.
     """
@@ -88,16 +88,27 @@ def upload_all_files():
     if not loading_files:
         messagebox.showerror("Error", "No files to upload.")
         return
+
+    valid_files = []
     for file_info in loading_files:
         data_type = file_info['data_type'].get()
         file_path = file_info['path']
-        print(f"Uploading {file_path} as {data_type}")
-        db_handler.start_process(file_path, data_type)
+        if not db_handler.validate_file_type(file_path, data_type):
+            messagebox.showerror("Error", f"File '{file_path.split('/')[-1]}' does not match the specified type '{data_type}'. Please try again.")
+        else:
+            valid_files.append(file_info)
+
+    if not valid_files:
+        return
+
+    for file_info in valid_files:
+        db_handler.start_process(file_info['path'], file_info['data_type'].get())
         loaded_files.append(file_info)
+
     loading_files.clear()
     update_loading_list()
     update_loaded_list()
-    messagebox.showinfo("Success", "All files uploaded successfully!")
+    messagebox.showinfo("Success", "All valid files uploaded successfully!")
 
 def export_all_files():
     """Exports files to Excel."""
