@@ -1,2 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+.idea/
+
+# Secret files
 main/main_db.xlsx
 main/not_neurotech_db.xlsx
+
+# Other ignores
+*.log
+*.env
