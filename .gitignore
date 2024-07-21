@@ -10,6 +10,7 @@ __pycache__/
 # Secret files
 main/main_db.xlsx
 main/not_neurotech_db.xlsx
+main/new_compnies.xlsx
 
 # Other ignores
 *.log

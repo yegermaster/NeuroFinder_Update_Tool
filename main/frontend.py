@@ -115,7 +115,7 @@ def export_all_files():
     if not loaded_files:
         messagebox.showerror("Error", "No files to export.")
         return
-    db_handler.export('main/new1.xlsx')
+    db_handler.export('main/new_compnies.xlsx')
     messagebox.showinfo("Success", "All files uploaded exported")
 
 def update_loaded_list():
