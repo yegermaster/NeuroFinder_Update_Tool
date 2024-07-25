@@ -4,6 +4,8 @@ This script conatins constats for the project.
 Constants:
     location_dict: Dictionary of locations and their correct formalization company names.
 """
+key_words = ['brain', 'mental health', 'psychology', 'neurotech',
+                   'cognitive', 'neuroscience','cognition', 'neuro', 'bci','neuroimaging','synapse']
 
 
 location_dict = {"Tel Aviv": "Tel-Aviv-Yafo", "Tel Aviv-Yafo": "Tel Aviv-Yafo",
