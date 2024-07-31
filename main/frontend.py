@@ -8,7 +8,6 @@ import pandas as pd
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from db_handler import DbHandler
 
-
 # Constants
 MAIN_DB_PATH = 'main/main_db.xlsx'
 NOT_NEUROTECH_PATH = 'main/not_neurotech_db.xlsx'
@@ -102,7 +101,7 @@ def upload_all_files():
         return
 
     for file_info in valid_files:
-        db_handler.start_process(file_info['path'], file_info['data_type'].get())
+        db_handler.start_searching_process(file_info['path'], file_info['data_type'].get())
         loaded_files.append(file_info)
 
     loading_files.clear()
@@ -130,6 +129,11 @@ def update_loaded_list():
 
         file_label = ttk.Label(loaded_list_frame, text=file_path.split('/')[-1])
         file_label.grid(row=i, column=0, padx=5, pady=5)
+
+def upload_image():
+    """Opens the upload image gui"""
+    pass
+
 # Initialize the root window with customtkinter style
 ctk.set_appearance_mode("System")  # Modes: "System" (default), "Light", "Dark"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
@@ -141,6 +145,10 @@ root.geometry("600x600")
 # Main header
 header = ctk.CTkLabel(root, text="Upload Files", font=("Arial", 16), fg_color="green", text_color="white", anchor="center")
 header.pack(fill="x", pady=10)
+
+# Img uploader
+img_button = ctk.CTkButton(root, text="Upload Images", command=upload_image)
+img_button.pack(pady=10)
 
 # Drag and drop frame
 drag_frame = ctk.CTkFrame(root, width=400, height=200, corner_radius=10)
