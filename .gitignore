@@ -12,6 +12,9 @@ main/main_db.xlsx
 main/not_neurotech_db.xlsx
 main/new_compnies.xlsx
 
+# Environment variables
+.env
+
+
 # Other ignores
 *.log
-*.env

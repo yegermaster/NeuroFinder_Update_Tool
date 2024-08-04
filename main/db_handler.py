@@ -7,7 +7,6 @@ import os
 import unicodedata
 import pandas as pd
 
-
 def clean_value(value):
     """Cleans the input value by stripping unwanted characters and converting to int if possible."""
     if pd.isna(value):
@@ -43,14 +42,13 @@ def clean_and_save(filepath, output_dir='cleaned_data', file_type='csv'):
 
 
 class DbHandler:
-    """Represents a single file that has been uploaded"""
-    def __init__(self, main_db_path: str, not_neuro_tech_path:str):
+    """Handles a data files from tsun, cb, pb and others"""
+    def __init__(self, main_db_path, not_neurotech_path):
         self.main_db = pd.read_excel(main_db_path)
-        self.not_neurotech_db = pd.read_excel(not_neuro_tech_path)
-        self.df = None
+        self.not_neurotech_db = pd.read_excel(not_neurotech_path)
+        self.df = pd.DataFrame()
         self.new_compnies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
-        self.update_compnies_db = pd.DataFrame(columns=self.main_db.columns.to_list())
-
+        self.update_compnies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
 
     def normalize(self, name: str) -> str:
         """Normalzies a given name string"""
@@ -70,11 +68,9 @@ class DbHandler:
         """Checks if a company is already in the given database."""
         normalized_name = self.normalize(company_name)
         current_names = self.normalize_column_category(self.main_db['Company_Name'])
-        former_names = self.normalize_column_category(self.main_db.get('Former Company Names',
-                                                                        pd.Series([])))
+        former_names = self.normalize_column_category(self.main_db.get('Former Company Names', pd.Series([])))
         return any((current_names == normalized_name) | (former_names == normalized_name))
     
-   
     def is_company_in_new_db(self, company_name, db_name):
         """Checks if a company is already in the given database."""
         normalized_name = self.normalize(company_name)
@@ -86,7 +82,9 @@ class DbHandler:
     
     def export(self, path):
         """Exports new database to excel"""
-        self.new_compnies_db.to_excel(path, index=False)
+        if not path.lower().endswith('.xlsx'):
+            raise ValueError("File path must end with .xlsx")
+        self.new_compnies_db.to_excel(path, index=False, engine='openpyxl')
     
     def clear_new_db(self):
         """Clears new database"""
@@ -98,8 +96,8 @@ class DbHandler:
         required_columns = {
             'tsun': ['Finder URL'],
             'cb': ['CB Rank (Company)'],
-            'pb': ['PitchBook special column'],  # Update with actual columns if known
-            'other': ['other format special column']  # Update with actual columns if known
+            'pb': ['PitchBook uniqe column'],  # Update with actual columns if known
+            'other': ['other format uniqe column']  # Update with actual columns if known
         }
         if data_type not in required_columns:
             return False
@@ -122,8 +120,6 @@ class DbHandler:
         self.df = clean_dataframe(file_path)
         if data_type == 'tsun':
             self.update_current_compnies_tsun()
-
-
 
     def is_company_not_neurotech(self, company_name):
         """Checks if a company is listed in the not neurotech database."""

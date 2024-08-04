@@ -7,34 +7,43 @@ import customtkinter as ctk
 import pandas as pd
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from db_handler import DbHandler
+from dotenv import load_dotenv
+import os
+
 
 # Constants
-MAIN_DB_PATH = 'main/main_db.xlsx'
-NOT_NEUROTECH_PATH = 'main/not_neurotech_db.xlsx'
+load_dotenv()
+MAIN_DB_PATH = os.getenv('MAIN_DB_PATH')
+NOT_NEUROTECH_DB_PATH = os.getenv('NOT_NEUROTECH_DB_PATH')
+NEW_COMPANIES_PATH = os.getenv('NEW_COMPANIES_PATH')
+
+
+print(f"MAIN_DB_PATH: {MAIN_DB_PATH}")  # Debugging line
+print(f"NOT_NEUROTECH_DB_PATH: {NOT_NEUROTECH_DB_PATH}")  # Debugging line
+
 FILE_TYPES = ["tsun", "cb", "pb", "other"]
 loading_files = []
 loaded_files = []
-db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_PATH)
+db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_DB_PATH )
 
 
 def read_file(filepath:str):
-    """
-    Reads a file and updates the loading file list.
-    """
-    if filepath.endswith('.csv'):
-        pd.read_csv(filepath)
-    elif filepath.endswith('.xlsx'):
-        pd.read_excel(filepath)
-    else:
-        messagebox.showerror("Error", "Unsupported file format.")
-        return
-    loading_files.append({"path": filepath, "data_type": tk.StringVar(value="tsun")})
-    update_loading_list()
+    """Reads a file and updates the loading file list. """
+    try:
+        if filepath.endswith('.csv'):
+            pd.read_csv(filepath)
+        elif filepath.endswith('.xlsx'):
+            pd.read_excel(filepath)
+        else:
+            messagebox.showerror("Error", "Unsupported file format.")
+            return
+        loading_files.append({"path": filepath, "data_type": tk.StringVar(value="tsun")})
+        update_loading_list()
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to read file: {e}")
 
 def update_loading_list():
-    """
-    Updates the displayed list of loading files.
-    """
+    """Updates the displayed list of loading files."""
     for widget in loading_list_frame.winfo_children():
         widget.destroy()
 
@@ -56,34 +65,26 @@ def update_loading_list():
         delete_button.grid(row=i, column=2, padx=5, pady=5)
 
 def delete_loading_file(index: int):
-    """
-    Deletes a file from the loading file list.
-    """
+    """Deletes a file from the loading file list."""
     del loading_files[index]
     update_loading_list()
 
 def open_file_dialog():
-    """
-    Opens a file dialog to select a file for uploading.
-    """
+    """Opens a file dialog to select a file for uploading."""
     filepath = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"),
                                                       ("Excel files", "*.xlsx")])
     if filepath:
         read_file(filepath)
 
 def drop(event: any):
-    """
-    Handles file drop events.
-    """
+    """Handles file drop events."""
     filepath = event.data
     if filepath:
         filepath = filepath.strip('{}')  # Strip curly braces if present
         read_file(filepath)
 
 def upload_all_files():
-    """
-    Handles the final upload of all files.
-    """
+    """Handles the final upload of all files."""
     if not loading_files:
         messagebox.showerror("Error", "No files to upload.")
         return
@@ -114,13 +115,12 @@ def export_all_files():
     if not loaded_files:
         messagebox.showerror("Error", "No files to export.")
         return
-    db_handler.export('main/new_compnies.xlsx')
-    messagebox.showinfo("Success", "All files uploaded exported")
+    db_handler.export(NEW_COMPANIES_PATH)
+    messagebox.showinfo("Success", "All files exported successfully!")
+
 
 def update_loaded_list():
-    """
-    Updates the displayed list of loaded files.
-    """
+    """Updates the displayed list of loaded files."""
     for widget in loaded_list_frame.winfo_children():
         widget.destroy()
 
