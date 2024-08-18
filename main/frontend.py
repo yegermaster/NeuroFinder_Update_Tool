@@ -8,8 +8,12 @@ import pandas as pd
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from db_handler import DbHandler
 from dotenv import load_dotenv
+import datetime as dt
 import os
 
+
+#TODO: srearch both sites when fiding new comapnies
+#TODO: add updating data
 
 # Constants
 load_dotenv()
