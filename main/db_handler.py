@@ -6,6 +6,7 @@ import re
 import os
 import unicodedata
 import pandas as pd
+from datetime import datetime as dt
 
 def clean_value(value):
     """Cleans the input value by stripping unwanted characters and converting to int if possible."""
@@ -80,10 +81,22 @@ class DbHandler:
             current_names = self.normalize_column_category(self.update_compnies_db['Company_Name'])
         return any(current_names == normalized_name)
     
+    def get_updating_date(self):
+        """Adds the current date to the 'Updating_Date' column for new companies."""
+        current_date = dt.now().strftime("%d-%m-%Y")
+        if 'Updating_Date' not in self.new_compnies_db.columns:
+            self.new_compnies_db['Updating_Date'] = current_date
+        else:
+            # Only update rows where 'Updating_Date' is NaN or empty
+            self.new_compnies_db['Updating_Date'] = self.new_compnies_db['Updating_Date'].apply(
+                lambda x: current_date if pd.isna(x) or x == '' else x
+            )
+
     def export(self, path):
         """Exports new database to excel"""
         if not path.lower().endswith('.xlsx'):
             raise ValueError("File path must end with .xlsx")
+        self.get_updating_date()
         self.new_compnies_db.to_excel(path, index=False, engine='openpyxl')
     
     def clear_new_db(self):

@@ -13,7 +13,6 @@ import os
 
 
 #TODO: srearch both sites when fiding new comapnies
-#TODO: add updating data
 
 # Constants
 load_dotenv()
