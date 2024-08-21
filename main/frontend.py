@@ -5,23 +5,16 @@ as well as for uploading images to ImgBB and updating a CSV file with image URLs
 import os
 import base64
 import logging
-import re
 import csv
-
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import customtkinter as ctk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import pandas as pd
-from db_handler import DbHandler
+from backend import DbHandler, escape_special_characters
 from dotenv import load_dotenv
-
 import requests
 
-
-
-
-#TODO: srearch both sites when fiding new comapnies
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +23,7 @@ NOT_NEUROTECH_DB_PATH = os.getenv('NOT_NEUROTECH_DB_PATH')
 NEW_COMPANIES_PATH = os.getenv('NEW_COMPANIES_PATH')
 IMGBB_UPLOAD_URL = os.getenv('IMGBB_UPLOAD_URL')
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
+UPDATED_COMPANIES_PATH = os.getenv('UPDATED_COMPANIES_PATH')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -51,9 +45,6 @@ root.geometry("600x600")
 folder_path = tk.StringVar()
 csv_path = tk.StringVar()
 
-def escape_special_characters(name: str) -> str:
-    """Replaces special characters in a filename with underscores to ensure compatibility."""
-    return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
 
 def upload_to_imgbb(image_path: str) -> str:
     """Uploads an image to ImgBB and returns the URL of the uploaded image."""
@@ -181,6 +172,7 @@ def load_all_files():
 
     for file_info in valid_files:
         db_handler.start_searching_process(file_info['path'], file_info['data_type'].get())
+        db_handler.start_update_process(file_info['path'], file_info['data_type'].get())
         loaded_files.append(file_info)
 
     loading_files.clear()
@@ -193,8 +185,13 @@ def export_loaded_files():
     if not loaded_files:
         messagebox.showerror("Error", "No files to export.")
         return
-    db_handler.export(NEW_COMPANIES_PATH)
+    db_handler.export_new(NEW_COMPANIES_PATH)
     messagebox.showinfo("Success", "All files exported successfully!")
+
+def export_updated_file():
+    """Exports an Excel file of companies that need to be updated."""
+    db_handler.export_updates(UPDATED_COMPANIES_PATH)
+    messagebox.showinfo("Success", "Updated companies exported successfully!")
 
 def refresh_loaded_file_list():
     """Updates the displayed list of loaded files."""
@@ -281,8 +278,12 @@ button_frame.pack_propagate(False)
 final_upload_button = ctk.CTkButton(button_frame, text="Load All Files", command=load_all_files)
 final_upload_button.pack(pady=5)
 
-export_button = ctk.CTkButton(button_frame, text="Export", command=export_loaded_files)
-export_button.pack(pady=5)
+export_new_companies_button = ctk.CTkButton(button_frame, text="Export New Companies", command=export_loaded_files)
+export_new_companies_button.pack(pady=5)
+
+export_updates_button = ctk.CTkButton(button_frame, text="Export Updated Companies", command=export_updated_file)
+export_updates_button.pack(pady=5)
+
 
 # Section for files ready to load
 loading_label = ctk.CTkLabel(root, text="Files ready to Load:", anchor="w")
