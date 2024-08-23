@@ -14,7 +14,7 @@ import pandas as pd
 from backend import DbHandler, escape_special_characters
 from dotenv import load_dotenv
 import requests
-
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -33,6 +33,7 @@ FILE_TYPES = ["tsun", "cb", "pb", "other"]
 loading_files = []
 loaded_files = []
 db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_DB_PATH)
+lock = threading.Lock()
 
 # Initialize the root window with customtkinter style
 ctk.set_appearance_mode("System")
@@ -44,7 +45,6 @@ root.geometry("600x600")
 
 folder_path = tk.StringVar()
 csv_path = tk.StringVar()
-
 
 def upload_to_imgbb(image_path: str) -> str:
     """Uploads an image to ImgBB and returns the URL of the uploaded image."""
@@ -69,12 +69,13 @@ def upload_to_imgbb(image_path: str) -> str:
     except requests.exceptions.RequestException as e:
         logging.error("Failed to upload %s to ImgBB: %s", image_path, e)
         return None
-    
+
 def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
     "Updates a CSV file by adding the image URL to the corresponding company."
     rows = []
     updated = False
     company_name = escape_special_characters(company_name)
+
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
         reader = csv.DictReader(file)
         fieldnames = reader.fieldnames + ['ImageURL'] if 'ImageURL' not in reader.fieldnames else reader.fieldnames
@@ -83,31 +84,40 @@ def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
                 row['ImageURL'] = image_url
                 updated = True
             rows.append(row)
-    if updated:
-        with open(csv_file, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
+        if not updated:
+            new_row = {field: "" for field in fieldnames}
+            new_row['Company Name'] = company_name
+            new_row['ImageURL'] = image_url
+            rows.append(new_row)
+    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 def process_file(filepath: str):
-    """Reads a file and updates the loading file list. """
+    """Processes a file and updates the loading file list."""
     try:
         if filepath.endswith('.csv'):
-            pd.read_csv(filepath)
+            pd.read_csv(filepath)  # Check if the CSV file can be read
         elif filepath.endswith('.xlsx'):
-            pd.read_excel(filepath)
+            pd.read_excel(filepath)  # Check if the Excel file can be read
         else:
             messagebox.showerror("Error", "Unsupported file format.")
             return
+        
         loading_files.append({"path": filepath, "data_type": tk.StringVar(value="tsun")})
         refresh_loading_file_list()
     except FileNotFoundError:
+        logging.error("File not found: %s", filepath)
         messagebox.showerror("Error", f"File not found: {filepath}")
     except pd.errors.EmptyDataError:
+        logging.error("The file is empty: %s", filepath)
         messagebox.showerror("Error", f"The file is empty: {filepath}")
     except pd.errors.ParserError:
+        logging.error("Parsing error in file: %s", filepath)
         messagebox.showerror("Error", f"Parsing error in file: {filepath}")
     except PermissionError:
+        logging.error("Permission denied: %s", filepath)
         messagebox.showerror("Error", f"Permission denied: {filepath}")
 
 def refresh_loading_file_list():
@@ -134,21 +144,23 @@ def refresh_loading_file_list():
 
 def delete_file_from_loading_list(index: int):
     """Deletes a file from the loading file list."""
-    del loading_files[index]
+    with lock:
+        del loading_files[index]
     refresh_loading_file_list()
 
 def open_file_dialog():
-    """Opens a file dialog to select a file for uploading."""
-    filepath = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"),
-                                                      ("Excel files", "*.xlsx")])
-    if filepath:
-        process_file(filepath)
+    """Opens a file dialog to select multiple files for uploading."""
+    filepaths = filedialog.askopenfilenames(filetypes=[("CSV files", "*.csv"),
+                                                       ("Excel files", "*.xlsx")])
+    if filepaths:
+        for filepath in filepaths:
+            process_file(filepath)
 
 def drop(event: any):
-    """Handles file drop events."""
-    filepath = event.data
-    if filepath:
-        filepath = filepath.strip('{}')  # Strip curly braces if present
+    """Handles file drop events, allowing multiple files."""
+    filepaths = event.data.strip('{}').split('} {')
+    for filepath in filepaths:
+        filepath = os.path.normpath(filepath)  # Correct the path format for consistency
         process_file(filepath)
 
 def load_all_files():
@@ -158,18 +170,18 @@ def load_all_files():
         return
 
     valid_files = []
-    for file_info in loading_files:
-        data_type = file_info['data_type'].get()
-        file_path = file_info['path']
-        if not db_handler.validate_file_type(file_path, data_type):
-            messagebox.showerror("Error",
-                                  f"File '{file_path.split('/')[-1]}' does not match the specified type '{data_type}'. Please try again.")
-        else:
-            valid_files.append(file_info)
-
+    with lock:
+        for file_info in loading_files:
+            data_type = file_info['data_type'].get()
+            file_path = file_info['path']
+            if not db_handler.validate_file_type(file_path, data_type):
+                messagebox.showerror("Error",
+                                    f"File '{file_path.split('/')[-1]}' does not match the specified type '{data_type}'. Please try again.")
+            else:
+                valid_files.append(file_info)
     if not valid_files:
         return
-
+    
     for file_info in valid_files:
         db_handler.start_searching_process(file_info['path'], file_info['data_type'].get())
         db_handler.start_update_process(file_info['path'], file_info['data_type'].get())
@@ -233,7 +245,6 @@ def process_image_folder(image_folder_path, csv_file):
         messagebox.showerror("Upload Errors", "\n".join(error_logs))
     else:
         messagebox.showinfo("Success", "Process completed successfully!")
-
 
 # Main header
 header = ctk.CTkLabel(root, text="Upload Files",

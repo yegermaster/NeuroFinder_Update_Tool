@@ -1,12 +1,12 @@
 """
-This module provides functions for realzing the automating tool algortheim.
+This module provides functions for realizing the automating tool algorithm.
 """
+
 import re
 import unicodedata
-import pandas as pd
 from datetime import datetime as dt
+import pandas as pd
 
-#TODO: Add updating for CB
 
 def clean_value(value):
     """Cleans the input value by stripping unwanted characters and converting to int if possible."""
@@ -53,15 +53,15 @@ class DbHandler:
     def normalize_column_category(self, column_data):
         """Normalizes the names in a given column of the DataFrame."""
         return column_data.apply(lambda x: self.normalize(x) if isinstance(x, str) else '')
-
+    
     def is_company_in_main_db(self, company_name):
         """Checks if a company is already in the given database."""
         normalized_name = self.normalize(company_name)
         current_names = self.normalize_column_category(self.main_db['Company_Name'])
-        former_names = self.normalize_column_category(self.main_db.get('Former Company Names', pd.Series([])))
-        return any((current_names == normalized_name) | (former_names == normalized_name))
+        former_names = self.normalize_column_category(self.main_db.get('Former Company Names', pd.Series(dtype='float64')))
+        return any((current_names == normalized_name) | (former_names == normalized_name))   
     
-    def is_company_in_new_db(self, company_name, db_name):
+    def is_company_in_db(self, company_name, db_name):
         """Checks if a company is already in the given database."""
         normalized_name = self.normalize(company_name)
         if db_name == "new":
@@ -80,7 +80,7 @@ class DbHandler:
             self.new_companies_db['Updating_Date'] = self.new_companies_db['Updating_Date'].apply(
                 lambda x: current_date if pd.isna(x) or x == '' else x
             )
-
+    
     def export_new(self, path):
         """Exports new database to excel"""
         if not path.lower().endswith('.xlsx'):
@@ -115,19 +115,21 @@ class DbHandler:
         """Start the searching process of the algortheim"""
         self.df = clean_dataframe(file_path)
         if data_type == 'tsun':
-            self.find_new_compnies_tsun()
+            self.find_new_companies_tsun()
         elif data_type == 'cb':
-            self.find_new_compnies_cb()
+            self.find_new_companies_cb()
         elif data_type == 'pb':
-            self.find_new_compnies_pb()
+            self.find_new_companies_pb()
         else:
-            self.find_new_compnies_other()
+            self.find_new_companies_other()
 
     def start_update_process(self, file_path: str, data_type: str):
         """Start the updating process of the algortheim"""
         self.df = clean_dataframe(file_path)
         if data_type == 'tsun':
             self.update_current_companies_tsun()
+        if data_type == 'cb':
+            self.update_current_companies_cb()
 
     def is_company_not_neurotech(self, company_name):
         """Checks if a company is listed in the not neurotech database."""
@@ -135,8 +137,8 @@ class DbHandler:
         current_names = self.normalize_column_category(self.not_neurotech_db['Company_Name'])
         return any(current_names == normalized_name)
 
-    def find_new_compnies_tsun(self):
-        """Findes new compnies from the startup central data"""
+    def find_new_companies_tsun(self):
+        """Finds new companies from the Startup Nation Central data"""
         for _, row in self.df.iterrows():
             company_name = row['Name']
             description = row['Description']
@@ -146,7 +148,7 @@ class DbHandler:
             funding_stage = row['Funding Stage']
             condition_1 = self.is_company_in_main_db(company_name)
             condition_2 = self.is_company_not_neurotech(company_name)
-            condition_3 = self.is_company_in_new_db(company_name, db_name="new")
+            condition_3 = self.is_company_in_db(company_name, db_name="new")
             if not condition_1 and not condition_2 and not condition_3:
                 new_entry = pd.Series({
                     'Company_Name': company_name,
@@ -158,7 +160,7 @@ class DbHandler:
                 })
                 self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
 
-    def find_new_compnies_cb(self):
+    def find_new_companies_cb(self):
         """Findes new compnies from the crunchbase"""
         for _, row in self.df.iterrows():
             company_name = row['Organization Name']
@@ -170,7 +172,7 @@ class DbHandler:
             headquarters = row['Headquarters Location']
             condition_1 = self.is_company_in_main_db(company_name)
             condition_2 = self.is_company_not_neurotech(company_name)
-            condition_3 = self.is_company_in_new_db(company_name, db_name="new")
+            condition_3 = self.is_company_in_db(company_name, db_name="new")
             if not condition_1 and not condition_2 and not condition_3:
                 new_entry = {
                     'Company_Name': company_name,
@@ -183,11 +185,11 @@ class DbHandler:
                 }
                 self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
 
-    def find_new_compnies_pb(self):
+    def find_new_companies_pb(self):
         """Findes new compnies from pitchbook """
         print("handle_pb")
 
-    def find_new_compnies_other(self):
+    def find_new_companies_other(self):
         """Handles other data"""
         print("handle_other")
 
@@ -212,7 +214,7 @@ class DbHandler:
             # Check if the company exists in the main_db
             condition_1 = self.is_company_in_main_db(company_name)
             # Check if the company is already in the update_companies_db to avoid duplicate entries
-            condition_2 = self.is_company_in_new_db(company_name, db_name="update")
+            condition_2 = self.is_company_in_db(company_name, db_name="update")
             # Check if the company is in the not neurotech database
             condition_3 = self.is_company_not_neurotech(company_name)
 
@@ -240,9 +242,46 @@ class DbHandler:
                         differences['Company_Name'] = company_name
                         self.update_companies_db = pd.concat([self.update_companies_db, pd.DataFrame([differences])], ignore_index=True)
 
-    def update_current_compnies_cb(self):
-        """Updates current compnies from cb"""
-        pass
+    def update_current_companies_cb(self):
+        """Updates current companies from Crunchbase, ensuring no duplicates after tsun updates."""
+        for _, row in self.df.iterrows():
+            company_name = row['Organization Name']
+            website = row['Organization Name URL']
+            cb_rank = row['CB Rank (Company)']
+            condition_1 = self.is_company_in_main_db(company_name)
+            condition_3 = self.is_company_not_neurotech(company_name)
+            if condition_1 and not condition_3:
+                # Look for an existing entry in the update_companies_db
+                existing_update = self.update_companies_db[self.update_companies_db['Company_Name'] == company_name]
+
+                # Initialize a dictionary to store the differences
+                differences = {}
+                if not existing_update.empty:
+                    # Update existing entry if it exists
+                    differences = existing_update.iloc[0].to_dict()
+                else:
+                    main_db_entry = self.main_db[self.main_db['Company_Name'] == company_name]
+                    if not main_db_entry.empty:
+                        main_db_entry = main_db_entry.iloc[0].to_dict()
+                    else:
+                        # If the company is not found in main_db, skip to the next iteration
+                        continue
+
+                    # Update differences with new values if they differ
+                    if website and website != main_db_entry.get('CB (Crunchbase) Link'):
+                        differences['CB (Crunchbase) Link'] = website
+                    if cb_rank and cb_rank != main_db_entry.get('Company_CB_Rank'):
+                        differences['Company_CB_Rank'] = cb_rank
+
+                # If there are any differences, update or add the data in update_companies_db
+                if differences:
+                    differences['Company_Name'] = company_name
+                    if not existing_update.empty:
+                        # Update the existing entry in update_companies_db
+                        self.update_companies_db.update(pd.DataFrame([differences]))
+                    else:
+                        # Add a new entry to update_companies_db
+                        self.update_companies_db = pd.concat([self.update_companies_db, pd.DataFrame([differences])], ignore_index=True)
 
     def update_current_compnies_pb(self):
         """Updates current compnies from pb"""
