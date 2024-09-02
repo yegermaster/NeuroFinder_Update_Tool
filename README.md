@@ -34,7 +34,7 @@ Contains images used in the entire project such as logos, flowcharts, and the GU
 - **Keywords:** Utilize the following keywords for searches:
 
 ### CrunchBase:
-![alt text](project_images/cb_filters.png)
+
 
 - **Go to:** [Crunchbase Discover](https://www.crunchbase.com/discover/organization.companies/faa124b91c5c4a8f27dac94b4c96279c)
 
@@ -42,16 +42,17 @@ Contains images used in the entire project such as logos, flowcharts, and the GU
   - **Headquarters Location:** Israel  
   - **Description Keywords:** `['brain', 'mental health', 'psychology', 'neurotech', 'cognitive', 'neuroscience', 'cognition', 'neuro', 'bci', 'neuroimaging', 'synapse']`
 
+    ![alt text](project_images/cb_filters.png)
 
 ### The Start-Up Nation Central
 
 - **Edit the filter for each keyword and download the CSV (red squares):**
 ![TSUN Download CSV](project_images/tsun_download_csv.png)
 
-- **⚠️ Notice:** As of **August 2024**, you'll need to download the CSV file for each keyword separately. Additionally, each page must be downloaded individually, which may result in fewer results per keyword:
+- **⚠️ Notice:** As of **August 2024**, you'll need to download the CSV file for each keyword separately. Additionally, each page must be downloaded individually for example:
 
 ```bash
-files_name = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
+files_names = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
 ```
 
 ![alt text](project_images/csv_on_way_tsun.png)
@@ -61,21 +62,24 @@ files_name = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
 * **Task:** Load the acquired files into the GUI program and generate an update file.
 * **Manual Action:** Manually update the companies listed in the generated update file.
 ### GUI program
+![alt text](project_images/gui.png)
 - **Click the "Upload file or Drag files here" button:**  
-  - Upload the files that you got from CB and TSUN. 
-  - **Description Keywords:** `['brain', 'mental health', 'psychology', 'neurotech', 'cognitive', 'neuroscience', 'cognition', 'neuro', 'bci', 'neuroimaging', 'synapse']`
+  - Upload the files that you got from CB and TSUN.
   
-![alt text](project_images/uploading_all_files.png)
+  ![alt text](project_images/uploading_all_files.png)
 
 - **Classify** each file for it's original databse (red circle):
 
-![alt text](project_images/loading_files_types.png)
+  ![alt text](project_images/loading_files_types.png)
+
+
+- **Click the Export Updated Companies" button:**
+  - Get the eported file of the updated companies.
+  - Update the main database using the eported file.
+  - Don't forget about companies that did not showed up in the eported file.
 
 ### 2. New Company Identification
 * **Task:** Load the files into the GUI program and export a list of newly identified companies.
-
-![alt text](project_images/gui.png)
-
 
 ### 3. Neurotech Status Verification (Manual)
 * **Task:** Review the new companies' file and classify each company as neurotech or non-neurotech according to the definitions provided in the shared drive.
