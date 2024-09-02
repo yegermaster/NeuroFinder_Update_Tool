@@ -69,12 +69,12 @@ files_name = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
 
 - **Classify** each file for it's original databse (red circle):
 
-![alt text](project_images\loading_files_types.png)
+![alt text](project_images/loading_files_types.png)
 
 ### 2. New Company Identification
 * **Task:** Load the files into the GUI program and export a list of newly identified companies.
 
-![alt text](project_images\gui.png)
+![alt text](project_images/gui.png)
 
 
 ### 3. Neurotech Status Verification (Manual)
