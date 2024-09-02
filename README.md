@@ -4,6 +4,17 @@
 
 The **NeuroFinder Processing Tool** automates the management of a comprehensive database containing company information related to neurotechnology. This tool facilitates the import, standardization, validation, and updating of company data files in multiple formats (e.g., CSV, Excel). The process workflow is illustrated in the flowchart provided below.
 
+
+# 📁 Folder Structure and File Descriptions
+
+### main Directory
+* `backend.py`: Handles the core logic for processing, updating and exporting the database.
+* `frontend.py`: Manages the graphical user interface (GUI) aspects of the tool. It allows users to interact with the tool, upload files, classify data, and perform other tasks visually.
+* `constants.py`: Contains constant variables and configuration settings used throughout the project.
+
+### project_images Directory
+Contains images used in the entire project such as logos, flowcharts, and the GUI.
+
 ## 🚀 Workflow Overview
 0. **Data Acquisition:** Retrieve databases from Startup Nation Central, Crunchbase, and more when possible.
 1. **Database Update (automated):** Update the existing database with the latest information.

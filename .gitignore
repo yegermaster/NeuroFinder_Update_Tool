@@ -16,6 +16,5 @@ main/updated_companies.xlsx
 # Environment variables
 .env
 
-
 # Other ignores
 *.log
