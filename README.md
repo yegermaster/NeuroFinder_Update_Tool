@@ -46,6 +46,8 @@ Contains images used in the entire project such as logos, flowcharts, and the GU
 
 ### The Start-Up Nation Central
 
+- **Go to:** [The Start Up Nation Finder](https://finder.startupnationcentral.org/startups/search?&status=Active)
+
 - **Edit the filter for each keyword and download the CSV (red squares):**
 ![TSUN Download CSV](project_images/tsun_download_csv.png)
 
@@ -80,9 +82,10 @@ files_names = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
 
 ### 2. New Company Identification
 * **Task:** Load the files into the GUI program and export a list of newly identified companies.
+* **NOTE** Make sure all the base files are updated if run locally.
 
 ### 3. Neurotech Status Verification (Manual)
-* **Task:** Review the new companies' file and classify each company as neurotech or non-neurotech according to the definitions provided in the shared drive.
+* **Task:** Review the not evalutaed file and classify each company as neurotech or non-neurotech according to the definitions provided in the shared drive.
 * **Additional Action:** Fill in any missing information through internet searches.
 
 ### 4. Logo and URL Collection
