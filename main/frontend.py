@@ -3,13 +3,10 @@ frontend.py - This module provides a GUI for uploading CSV and Excel files,
 as well as for uploading images to ImgBB and updating a CSV file with image URLs.
 """
 
-
-# TODO: A solution to deploy the application in a non-local environment (e.g., server or cloud platform).
 # TODO: Ensure include former company names checks; consider adjusting data structures to lists or JSON.
 # TODO: Implement an algorithm to separate neurotech companies (True) from non-neurotech companies (False) in the output file.
 # TODO: Modify the status field to represent 'Not Evaluated' where applicable.
 # TODO: Verify and ensure that the code responsible for handling company logos operates correctly.
-# TODO: Implement a function to add new companies to the main database.
 
 
 import os
@@ -55,54 +52,6 @@ root.geometry("600x600")
 
 folder_path = tk.StringVar()
 csv_path = tk.StringVar()
-
-def upload_to_imgbb(image_path: str) -> str:
-    """Uploads an image to ImgBB and returns the URL of the uploaded image."""
-    try:
-        with open(image_path, 'rb') as image_file:
-            image_data = base64.b64encode(image_file.read()).decode('utf-8')
-
-        data = {
-            'key': IMGBB_API_KEY,
-            'image': image_data,
-            'name': os.path.basename(image_path)
-        }
-
-        response = requests.post(IMGBB_UPLOAD_URL, data=data, verify=False, timeout=10)
-        response.raise_for_status()
-
-        json_response = response.json()
-        return json_response['data']['url']
-    except requests.exceptions.Timeout:
-        logging.error("Request timed out while uploading %s to ImgBB.", image_path)
-        return None
-    except requests.exceptions.RequestException as e:
-        logging.error("Failed to upload %s to ImgBB: %s", image_path, e)
-        return None
-
-def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
-    "Updates a CSV file by adding the image URL to the corresponding company."
-    rows = []
-    updated = False
-    company_name = escape_special_characters(company_name)
-
-    with open(csv_file, 'r', newline='', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        fieldnames = reader.fieldnames + ['ImageURL'] if 'ImageURL' not in reader.fieldnames else reader.fieldnames
-        for row in reader:
-            if escape_special_characters(row['Company Name']) == company_name:
-                row['ImageURL'] = image_url
-                updated = True
-            rows.append(row)
-        if not updated:
-            new_row = {field: "" for field in fieldnames}
-            new_row['Company Name'] = company_name
-            new_row['ImageURL'] = image_url
-            rows.append(new_row)
-    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
 
 def process_file(filepath: str):
     """Processes a file and updates the loading file list."""
@@ -226,6 +175,8 @@ def refresh_loaded_file_list():
         file_label = ttk.Label(loaded_list_frame, text=file_path.split('/')[-1])
         file_label.grid(row=i, column=0, padx=5, pady=5)
 
+# Handle Images and Logos:
+
 def upload_images_and_update_csv():
     """Opens the upload image GUI"""
     folder = folder_path.get()
@@ -256,6 +207,53 @@ def process_image_folder(image_folder_path, csv_file):
     else:
         messagebox.showinfo("Success", "Process completed successfully!")
 
+def upload_to_imgbb(image_path: str) -> str:
+    """Uploads an image to ImgBB and returns the URL of the uploaded image."""
+    try:
+        with open(image_path, 'rb') as image_file:
+            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+
+        data = {
+            'key': IMGBB_API_KEY,
+            'image': image_data,
+            'name': os.path.basename(image_path)
+        }
+
+        response = requests.post(IMGBB_UPLOAD_URL, data=data, verify=False, timeout=10)
+        response.raise_for_status()
+
+        json_response = response.json()
+        return json_response['data']['url']
+    except requests.exceptions.Timeout:
+        logging.error("Request timed out while uploading %s to ImgBB.", image_path)
+        return None
+    except requests.exceptions.RequestException as e:
+        logging.error("Failed to upload %s to ImgBB: %s", image_path, e)
+        return None
+
+def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
+    "Updates a CSV file by adding the image URL to the corresponding company."
+    rows = []
+    updated = False
+    company_name = escape_special_characters(company_name)
+
+    with open(csv_file, 'r', newline='', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        fieldnames = reader.fieldnames + ['ImageURL'] if 'ImageURL' not in reader.fieldnames else reader.fieldnames
+        for row in reader:
+            if escape_special_characters(row['Company_Name']) == company_name:
+                row['ImageURL'] = image_url
+                updated = True
+            rows.append(row)
+        if not updated:
+            new_row = {field: "" for field in fieldnames}
+            new_row['CompanyName'] = company_name
+            new_row['ImageURL'] = image_url
+            rows.append(new_row)
+    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 ###GUI###
 # Main header
