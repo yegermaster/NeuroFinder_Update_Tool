@@ -88,6 +88,10 @@ files_names = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
 * **Task:** Review the not evalutaed file and classify each company as neurotech or non-neurotech according to the definitions provided in the shared drive.
 * **Additional Action:** Fill in any missing information through internet searches.
 
+# Pipe line summary:
+![alt text](project_images/pipeline.jpeg)
+
+
 ### 4. Logo and URL Collection
 * **Task:** Manually search for and add company logos to the visualization folder in the shared drive (ensure the company name is exact).
 * **Task:** Upload the current database and images into the GUI program to generate URLs.
