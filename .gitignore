@@ -8,7 +8,7 @@ __pycache__/
 .idea/
 
 # Secret files
-main/NeuroTech Industry IL 2024.xlsx.xlsx
+main/NeuroTech Industry IL 2024.xlsx
 main/not_neurotech.xlsx
 main/new_companies.xlsx
 main/updated_companies.xlsx
