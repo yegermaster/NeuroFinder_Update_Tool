@@ -3,11 +3,8 @@ frontend.py - This module provides a GUI for uploading CSV and Excel files,
 as well as for uploading images to ImgBB and updating a CSV file with image URLs.
 """
 
-# TODO: Ensure include former company names checks; consider adjusting data structures to lists or JSON.
 # TODO: Implement an algorithm to separate neurotech companies (True) from non-neurotech companies (False) in the output file.
 # TODO: Modify the status field to represent 'Not Evaluated' where applicable.
-# TODO: Verify and ensure that the code responsible for handling company logos operates correctly.
-
 
 import os
 import base64

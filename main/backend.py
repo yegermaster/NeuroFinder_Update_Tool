@@ -58,10 +58,13 @@ class DbHandler:
     
     def is_company_in_database(self, company_name, db):
         """Checks if a company is already in the given database, including former names."""
+        if 'Company Name' not in db.columns:
+            raise ValueError("no company name")
+        
         normalized_name = self.normalize(company_name)
 
         # Normalize 'Company_Name' column
-        current_names = db['Company_Name'].apply(self.normalize).tolist()
+        current_names = db['Company Name'].apply(self.normalize).tolist()
 
         # Initialize a set with current names
         all_names_set = set(current_names)
@@ -71,7 +74,7 @@ class DbHandler:
             former_names_series = db['former company names'].dropna()
             for former_names in former_names_series:
                 if isinstance(former_names, str):
-                    names_list = [name.strip() for name in former_names.split(',')]
+                    names_list = [name.strip() for name in former_names.split(';')]
                     normalized_former_names = [self.normalize(name) for name in names_list]
                     all_names_set.update(normalized_former_names)
 
@@ -80,6 +83,7 @@ class DbHandler:
     def get_updating_date(self):
         """Adds the current date to the 'Updating_Date' column for new companies."""
         current_date = dt.now().strftime("%d-%m-%Y")
+
         if 'Updating_Date' not in self.new_companies_db.columns:
             self.new_companies_db['Updating_Date'] = current_date
         else:
@@ -87,6 +91,7 @@ class DbHandler:
             self.new_companies_db['Updating_Date'] = self.new_companies_db['Updating_Date'].apply(
                 lambda x: current_date if pd.isna(x) or x == '' else x
             )
+
     
     def export_new(self, path):
         """Exports new database to excel"""
@@ -99,6 +104,15 @@ class DbHandler:
         """Exports the updates database to an Excel file."""
         if not path.lower().endswith('.xlsx'):
             raise ValueError("File path must end with .xlsx")
+        
+        current_date = dt.now().strftime("%d-%m-%Y")
+        if 'Updating_Date' not in self.update_companies_db.columns:
+            self.update_companies_db['Updating_Date'] = current_date
+        else:
+            # Only update rows where 'Updating_Date' is NaN or empty
+            self.update_companies_db['Updating_Date'] = self.update_companies_db['Updating_Date'].apply(
+                lambda x: current_date if pd.isna(x) or x == '' else x
+            )
         self.update_companies_db.to_excel(path, index=False, engine='openpyxl')
 
     def clear_new_db(self):
@@ -152,11 +166,11 @@ class DbHandler:
             is_in_new_db = self.is_company_in_database(company_name, self.new_companies_db)
             if not is_in_main_db and not is_in_not_neurotech and not is_in_new_db:
                 new_entry = pd.Series({
-                    'Company_Name': company_name,
+                    'Company Name': company_name,
                     'Startup Nation Page': website,
-                    'Company_Founded_Year': year_founded,
-                    'Company_Number_of_Employees': employees,
-                    'Funding_Status': funding_stage,
+                    'Company Founded Year': year_founded,
+                    'Company Number of Employees': employees,
+                    'Funding Status': funding_stage,
                     'Description': description
                 })
                 self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
@@ -178,13 +192,13 @@ class DbHandler:
 
             if not is_in_main_db and not is_in_not_neurotech and not is_in_new_db:
                 new_entry = {
-                    'Company_Name': company_name,
+                    'Company Name': company_name,
                     'CB (Crunchbase) Link': website,
-                    'Company_Founded_Year': year_founded,
+                    'Company Founded Year': year_founded,
                     'Company_Location': headquarters,
                     'Description': description,
                     'Full Description': full_description,
-                    'Company_CB_Rank': cb_rank
+                    'Company CB Rank': cb_rank
                 }
                 self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
 
@@ -202,6 +216,7 @@ class DbHandler:
             return None
 
         # Remove any non-numeric characters except for "-" and ","
+        employee_str = str(employee_str)
         employee_str = re.sub(r'[^0-9-]', '', employee_str)
 
         return employee_str.strip()
@@ -222,7 +237,7 @@ class DbHandler:
             is_in_new_db  = self.is_company_in_database(company_name, self.not_neurotech_db)
 
             if is_in_main_db and not is_in_not_neurotech and not is_in_new_db:
-                main_db_entry = self.main_db[self.main_db['Company_Name'] == company_name]
+                main_db_entry = self.main_db[self.main_db['Company Name'] == company_name]
                 if not main_db_entry.empty:
                     main_db_entry = main_db_entry.iloc[0]  # Get the first row as a Series         
                     
@@ -230,19 +245,19 @@ class DbHandler:
                     differences = {}
                     
                     # Compare the employees column specifically
-                    main_db_employees = self.normalize_employee_count(main_db_entry['Company_Number_of_Employees'])
+                    main_db_employees = self.normalize_employee_count(main_db_entry['Company Number of Employees'])
                     if employees and employees != main_db_employees:
-                        differences['Company_Number_of_Employees'] = employees
+                        differences['Company Number of Employees'] = employees
 
                     # Add other fields if needed
                     if website and website != main_db_entry['Startup Nation Page']:
                         differences['Startup Nation Page'] = website
-                    if funding_stage and funding_stage != main_db_entry['Funding_Status']:
-                        differences['Funding_Status'] = funding_stage
+                    if funding_stage and funding_stage != main_db_entry['Funding Status']:
+                        differences['Funding Status'] = funding_stage
                     
                     # If there are any differences, add the updated data to update_companies_db
                     if differences:
-                        differences['Company_Name'] = company_name
+                        differences['Company Name'] = company_name
                         self.update_companies_db = pd.concat([self.update_companies_db, pd.DataFrame([differences])], ignore_index=True)
 
     def update_current_companies_cb(self):
@@ -255,7 +270,7 @@ class DbHandler:
             is_in_not_neurotech  = self.is_company_in_database(company_name, self.not_neurotech_db)
             if is_in_main_db and not is_in_not_neurotech:
                 # Look for an existing entry in the update_companies_db
-                existing_update = self.update_companies_db[self.update_companies_db['Company_Name'] == company_name]
+                existing_update = self.update_companies_db[self.update_companies_db['Company Name'] == company_name]
 
                 # Initialize a dictionary to store the differences
                 differences = {}
@@ -263,7 +278,7 @@ class DbHandler:
                     # Update existing entry if it exists
                     differences = existing_update.iloc[0].to_dict()
                 else:
-                    main_db_entry = self.main_db[self.main_db['Company_Name'] == company_name]
+                    main_db_entry = self.main_db[self.main_db['Company Name'] == company_name]
                     if not main_db_entry.empty:
                         main_db_entry = main_db_entry.iloc[0].to_dict()
                     else:
@@ -273,12 +288,12 @@ class DbHandler:
                     # Update differences with new values if they differ
                     if website and website != main_db_entry.get('CB (Crunchbase) Link'):
                         differences['CB (Crunchbase) Link'] = website
-                    if cb_rank and cb_rank != main_db_entry.get('Company_CB_Rank'):
-                        differences['Company_CB_Rank'] = cb_rank
+                    if cb_rank and cb_rank != main_db_entry.get('Company CB Rank'):
+                        differences['Company CB Rank'] = cb_rank
 
                 # If there are any differences, update or add the data in update_companies_db
                 if differences:
-                    differences['Company_Name'] = company_name
+                    differences['Company Name'] = company_name
                     if not existing_update.empty:
                         # Update the existing entry in update_companies_db
                         self.update_companies_db.update(pd.DataFrame([differences]))
