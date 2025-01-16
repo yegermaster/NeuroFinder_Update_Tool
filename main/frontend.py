@@ -85,7 +85,11 @@ def refresh_loading_file_list():
         file_path = file_info["path"]
         file_type_var = file_info["data_type"]
 
-        file_label = ttk.Label(loading_list_frame, text=file_path.split('/')[-1])
+        # Extract just the filename with extension
+        filename_only = os.path.splitext(os.path.basename(file_path))[0]
+        normalized_name = db_handler.normalize(filename_only)
+
+        file_label = ttk.Label(loading_list_frame, text=normalized_name)
         file_label.grid(row=i, column=0, padx=5, pady=5)
 
         type_menu = ttk.OptionMenu(loading_list_frame,
@@ -169,7 +173,11 @@ def refresh_loaded_file_list():
     for i, file_info in enumerate(loaded_files):
         file_path = file_info["path"]
 
-        file_label = ttk.Label(loaded_list_frame, text=file_path.split('/')[-1])
+        # Extract filename and normalize it
+        filename_only = os.path.splitext(os.path.basename(file_path))[0]
+        normalized_name = db_handler.normalize(filename_only)
+
+        file_label = ttk.Label(loaded_list_frame, text=normalized_name)
         file_label.grid(row=i, column=0, padx=5, pady=5)
 
 # Handle Images and Logos:
@@ -252,6 +260,35 @@ def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
         writer.writeheader()
         writer.writerows(rows)
 
+def create_scrolled_frame(parent):
+    """
+    Creates a scrollable CTkFrame within a parent widget and returns
+    the inner frame where you can place your widgets.
+    """
+    container = ctk.CTkFrame(parent)
+    container.pack(fill="both", expand=True)
+
+    # A regular tkinter Canvas + CTkScrollbar for scrolling
+    canvas = tk.Canvas(container, highlightthickness=0)
+    canvas.pack(side="left", fill="both", expand=True)
+
+    scrollbar = ctk.CTkScrollbar(container, orientation="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # The frame inside the canvas
+    inner_frame = ctk.CTkFrame(canvas)
+    canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
+    # Update scroll region when frame contents change
+    def on_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    inner_frame.bind("<Configure>", on_configure)
+
+    return inner_frame
+
 ###GUI###
 # Main header
 header = ctk.CTkLabel(root, text="Upload Files",
@@ -307,15 +344,13 @@ export_updates_button.pack(pady=5)
 loading_label = ctk.CTkLabel(root, text="Files ready to Load:", anchor="w")
 loading_label.pack(anchor="w", padx=20)
 
-loading_list_frame = ctk.CTkFrame(root)
-loading_list_frame.pack(pady=10, padx=20, fill="both", expand=True)
+loading_list_frame = create_scrolled_frame(root)
 
 # Section for files already loaded
 loaded_label = ctk.CTkLabel(root, text="Files Already Loaded:", anchor="w")
 loaded_label.pack(anchor="w", padx=20)
 
-loaded_list_frame = ctk.CTkFrame(root)
-loaded_list_frame.pack(pady=10, padx=20, fill="both", expand=True)
+loaded_list_frame = create_scrolled_frame(root)
 
 drag_frame.drop_target_register(DND_FILES)
 drag_frame.dnd_bind('<<Drop>>', drop)
