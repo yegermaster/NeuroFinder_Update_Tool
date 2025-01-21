@@ -103,9 +103,8 @@
 
 2. **Run GUI**: Start `frontend.py` to open the tool’s interface.
 
-
 ![GUI_gif](project_images\GUI_handling.gif)
-
+![GUI_handling](https://github.com/user-attachments/assets/78964d40-1c29-4600-b4b3-8c23dc554f97)
 
 3. **Upload Files**: Click **"Upload file or Drag files here"** and classify files
 
