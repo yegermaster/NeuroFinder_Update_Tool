@@ -69,6 +69,7 @@
 ### CrunchBase:
 
 ![crunchbase_gif](project_images\crunchbase_gif.gif)
+![crunchbase_gif](https://github.com/user-attachments/assets/2c30889b-90d5-4b91-956f-9c853c6d64ef)
 
 
 - **Edit the filter:**  
@@ -83,6 +84,7 @@
 
 
 ![tsun_gif](project_images\tsun_gif.gif)
+![tsun_gif](https://github.com/user-attachments/assets/a24d5666-851c-4b6f-836d-06423f66774b)
 
 
 - **Go to:** [The Start Up Nation Finder](https://finder.startupnationcentral.org/startups/search?&status=Active)
