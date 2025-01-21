@@ -318,7 +318,7 @@ ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 root = TkinterDnD.Tk()
-root.title("Neurotech File Manager")
+root.title("NeuroFinder Processing Tool")
 root.geometry("800x600")
 
 # Image uploading logic
