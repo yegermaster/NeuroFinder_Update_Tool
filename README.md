@@ -68,13 +68,22 @@
 
 ### CrunchBase:
 
+![crunchbase_gif](project_images\crunchbase_gif.gif)
+
+
 - **Edit the filter:**  
   - **Headquarters Location:** Israel  
   - **Description Keywords:** `['brain', 'mental health', 'psychology', 'neurotech', 'cognitive', 'neuroscience', 'cognition', 'neuro', 'bci', 'neuroimaging', 'synapse']`
 
     ![alt text](project_images/cb_filters.png)
+- **Export the file and save the file!:**  
+
 
 ### The Start-Up Nation Central
+
+
+![tsun_gif](project_images\tsun_gif.gif)
+
 
 - **Go to:** [The Start Up Nation Finder](https://finder.startupnationcentral.org/startups/search?&status=Active)
 
@@ -85,7 +94,12 @@
     ```bash
     files_names = ['cognition1.csv', 'cognition2.csv', 'cognition3.csv']
     ```
+
+- **Export the file and save the file!:**  
+
+
 ![alt text](project_images/csv_on_way_tsun.png)
+
 
 2. **Run GUI**: Start `frontend.py` to open the tool’s interface.
 
