@@ -12,6 +12,7 @@ main/NeuroTech Industry IL 2024.xlsx
 main/not_neurotech.xlsx
 main/new_companies.xlsx
 main/updated_companies.xlsx
+main/companies_with_career.xlsx
 
 # Environment variables
 .env
