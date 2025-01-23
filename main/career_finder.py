@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Load environment variables
 load_dotenv()
 MAIN_DB_PATH = os.getenv('MAIN_DB_PATH')
+RECRUITMENT_STATUS_PATH = os.getenv('RECRUITMENT_STATUS_PATH')
 
 # List of keywords that might indicate recruiting/hiring
 RECRUITMENT_KEYWORDS = [
@@ -82,7 +83,7 @@ def main():
         print(f"  {keyword}: {count}")
 
     # Save results to Excel with multiple sheets
-    with pd.ExcelWriter("main/recruitment_status.xlsx") as writer:
+    with pd.ExcelWriter(RECRUITMENT_STATUS_PATH) as writer:
         found_df.to_excel(writer, sheet_name='Found', index=False)
         error_df.to_excel(writer, sheet_name='Errors', index=False)
         not_found_df.to_excel(writer, sheet_name='Not Found', index=False)

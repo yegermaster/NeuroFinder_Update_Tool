@@ -7,6 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Load environment variables
 load_dotenv()
 MAIN_DB_PATH = os.getenv('MAIN_DB_PATH')
+WEBSITE_STATUS_PATH = os.getenv('WEBSITE_STATUS_PATH')
+
+
 
 def get_website_status(url):
     """
@@ -60,7 +63,7 @@ def main():
     results_df = pd.DataFrame(results)
 
     # Save results to Excel
-    results_file_path = "main/website_status.xlsx"
+    results_file_path = WEBSITE_STATUS_PATH
     results_df.to_excel(results_file_path, index=False)
 
     # Print summary

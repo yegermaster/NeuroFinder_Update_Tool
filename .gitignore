@@ -8,12 +8,7 @@ __pycache__/
 .idea/
 
 # Secret files
-main/NeuroTech Industry IL 2024.xlsx
-main/not_neurotech.xlsx
-main/new_companies.xlsx
-main/companies_to_be_updated.xlsx
-main/recruitment_status.xlsx
-main/website_status.xlsx
+data
 
 # Environment variables
 .env
