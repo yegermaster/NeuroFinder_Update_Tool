@@ -13,6 +13,8 @@ main/not_neurotech.xlsx
 main/new_companies.xlsx
 main/updated_companies.xlsx
 main/companies_with_career.xlsx
+main/career_status.xlsx
+main/website_status.xlsx
 
 # Environment variables
 .env
