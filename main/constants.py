@@ -1,3 +1,5 @@
+"""constants.py - consants and normalization for the model"""
+
 import pandas as pd
 import os
 from dotenv import load_dotenv

@@ -51,11 +51,9 @@ class DbHandler:
         name = re.sub(r'[^a-z0-9 ]', '', name)
         name = re.sub(r'\s+', ' ', name)
         return name
-    
     def normalize_column_category(self, column_data):
         """Normalizes the names in a given column of the DataFrame."""
         return column_data.apply(lambda x: self.normalize(x) if isinstance(x, str) else '')
-    
     def is_company_in_database(self, company_name, db):
         """Checks if a company is already in the given database, including former names."""
         if 'Company Name' not in db.columns:

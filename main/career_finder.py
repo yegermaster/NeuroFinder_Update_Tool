@@ -1,21 +1,21 @@
+"""
+career_finder.py - This module searches key words in all the websites and by the provides
+an indication for the company's recruting status.
+"""
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from dotenv import load_dotenv
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Load environment variables
 load_dotenv()
 MAIN_DB_PATH = os.getenv('MAIN_DB_PATH')
 RECRUITMENT_STATUS_PATH = os.getenv('RECRUITMENT_STATUS_PATH')
-
-# List of keywords that might indicate recruiting/hiring
-RECRUITMENT_KEYWORDS = [
-    "career", "careers", "jobs", "vacancies", "opportunities",
-    "hire", "apply", "hiring", "positions",
-    "employment", "job", "work with us"
-]
+RECRUITMENT_KEYWORDS = os.getenv('RECRUITMENT_KEYWORDS', '')
+RECRUITMENT_KEYWORDS = RECRUITMENT_KEYWORDS.split(',')
 
 def check_recruiting_keywords(url, keywords=RECRUITMENT_KEYWORDS):
     """Checks for the presence of any recruitment keywords in the website's text. """
@@ -29,17 +29,16 @@ def check_recruiting_keywords(url, keywords=RECRUITMENT_KEYWORDS):
         return None
 
 def main():
-    # Read data directly from Excel (assuming columns 'Company Name' and 'Website')
+    """Function to run the indication check. """
     data = pd.read_excel(MAIN_DB_PATH)
-
     found_data = []
     error_websites = []
     not_found_websites = []
 
     # Use ThreadPoolExecutor for concurrent requests
     with ThreadPoolExecutor(max_workers=20) as executor:
-        future_to_url = {executor.submit(check_recruiting_keywords, row['Website']): row for _, row in data.iterrows() if pd.notna(row['Website'])}
-        
+        future_to_url = {executor.submit(check_recruiting_keywords,
+                                          row['Website']): row for _, row in data.iterrows() if pd.notna(row['Website'])}
         for future in as_completed(future_to_url):
             row = future_to_url[future]
             company = row['Company Name']
@@ -87,7 +86,6 @@ def main():
         found_df.to_excel(writer, sheet_name='Found', index=False)
         error_df.to_excel(writer, sheet_name='Errors', index=False)
         not_found_df.to_excel(writer, sheet_name='Not Found', index=False)
-    
     print("\nSaved results to main/recruitment_results.xlsx")
 
 if __name__ == "__main__":
