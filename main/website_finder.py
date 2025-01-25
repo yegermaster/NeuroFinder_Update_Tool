@@ -30,12 +30,12 @@ def get_website_status(url):
         return response.status_code, response.status_code < 400
     except requests.exceptions.RequestException as e:
         return str(e), False
-
 def main():
     "main function the go over the websites"
     data = pd.read_excel(MAIN_DB_PATH)
 
     results = []
+    reachable_count = 0
     with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_url = {executor.submit(get_website_status,
                                           row['Website']): row for _, row in data.iterrows() if pd.notna(row['Website'])}
@@ -45,11 +45,12 @@ def main():
             company = row['Company Name']
             print(company)
             website = row['Website']
-
             try:
                 status_code, is_reachable = future.result()
-                # Append only if not reachable and not 403/406
-                if not is_reachable:
+                # Increment reachable count if website is reachable
+                if is_reachable:
+                    reachable_count += 1
+                else:
                     results.append({
                         'Company Name': company,
                         'Website': website,
@@ -70,10 +71,23 @@ def main():
     results_file_path = WEBSITE_STATUS_PATH
     results_df.to_excel(results_file_path, index=False)
 
+    total_companies = len(data)
+    null_websites = data['Website'].isnull().sum()
+    not_null_websites = data['Website'].dropna()
+    total_not_null = len(not_null_websites)
+
+    null_percentage = round((null_websites / total_companies) * 100, 2) if total_companies > 0 else 0
+    reachable_percentage = round((reachable_count / total_not_null) * 100, 2) if total_not_null > 0 else 0
+
     # Print summary
-    print(f"Total websites checked: {len(data)}")
+    print(f"Null website percentage: {null_percentage}%")
+    print(f"Reachable website percentage: {reachable_percentage}%")
+    print(f"Total websites checked: {total_not_null}")
+    print(f"Total null websites checked: {null_websites}")
+    print(f"Total reachable websites: {reachable_count}")
     print(f"Total websites not reachable or errored: {len(results_df)}")
     print(f"Saved results to {results_file_path}")
+
 
 if __name__ == "__main__":
     main()

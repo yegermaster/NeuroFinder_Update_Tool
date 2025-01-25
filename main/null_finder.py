@@ -50,8 +50,18 @@ def find_nulls_for_company(input_file, output_file):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+def print_null_sum(path):
+    """Calculate and print the percentage of null data"""
+    df = pd.read_excel(path)
+    total_data_points = df.size  # Total rows * columns
+    total_nulls = df.isnull().sum().sum()  # Total null values
+    null_percentage = (total_nulls / total_data_points) * 100
+    print(f"Total null data: {total_nulls} out of {total_data_points} ({null_percentage:.2f}%)")
+
 if __name__ == "__main__":
     # Input and output file paths
     find_nulls_for_company(MAIN_DB_PATH, NULL_DATA_PATH)
+    # null infromation
+    #print_null(MAIN_DB_PATH)
     # myseries = df.isnull().sum()
     # myseries.to_excel("main/data/null_list.xlsx")
