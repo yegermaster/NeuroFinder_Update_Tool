@@ -28,9 +28,9 @@ def check_recruiting_keywords(url, keywords=RECRUITMENT_KEYWORDS):
     except requests.exceptions.RequestException:
         return None
 
-def main():
+def find_career(main_db_path:str, recruitment_status_path:str):
     """Function to run the indication check. """
-    data = pd.read_excel(MAIN_DB_PATH)
+    data = pd.read_excel(main_db_path)
     found_data = []
     error_websites = []
     not_found_websites = []
@@ -82,11 +82,11 @@ def main():
         print(f"  {keyword}: {count}")
 
     # Save results to Excel with multiple sheets
-    with pd.ExcelWriter(RECRUITMENT_STATUS_PATH) as writer:
+    with pd.ExcelWriter(recruitment_status_path) as writer:
         found_df.to_excel(writer, sheet_name='Found', index=False)
         error_df.to_excel(writer, sheet_name='Errors', index=False)
         not_found_df.to_excel(writer, sheet_name='Not Found', index=False)
     print("\nSaved results to main/recruitment_results.xlsx")
 
 if __name__ == "__main__":
-    main()
+    find_career(MAIN_DB_PATH, RECRUITMENT_STATUS_PATH)

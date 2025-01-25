@@ -30,9 +30,10 @@ def get_website_status(url):
         return response.status_code, response.status_code < 400
     except requests.exceptions.RequestException as e:
         return str(e), False
-def main():
+    
+def find_websites(main_db_path:str, website_status_path:str):
     "main function the go over the websites"
-    data = pd.read_excel(MAIN_DB_PATH)
+    data = pd.read_excel(main_db_path)
 
     results = []
     reachable_count = 0
@@ -68,7 +69,7 @@ def main():
     results_df = pd.DataFrame(results)
 
     # Save results to Excel
-    results_file_path = WEBSITE_STATUS_PATH
+    results_file_path = website_status_path
     results_df.to_excel(results_file_path, index=False)
 
     total_companies = len(data)
@@ -90,4 +91,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    find_websites(MAIN_DB_PATH, WEBSITE_STATUS_PATH)

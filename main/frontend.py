@@ -23,6 +23,9 @@ import threading
 
 # --- Local imports from your backend module ---
 from backend import DbHandler, escape_special_characters
+from career_finder import find_career
+from website_finder import find_websites
+from null_finder import find_nulls_for_company
 
 # ---------------------------------------------------------------------------
 # Load environment variables
@@ -31,7 +34,10 @@ MAIN_DB_PATH = os.getenv('MAIN_DB_PATH')
 NOT_NEUROTECH_DB_PATH = os.getenv('NOT_NEUROTECH_DB_PATH')
 NEW_COMPANIES_PATH = os.getenv('NEW_COMPANIES_PATH')
 UPDATED_COMPANIES_PATH = os.getenv('UPDATED_COMPANIES_PATH')
+NULL_DATA_PATH = os.getenv('NULL_DATA_PATH')
+WEBSITE_STATUS_PATH = os.getenv('WEBSITE_STATUS_PATH')
 IMGBB_UPLOAD_URL = os.getenv('IMGBB_UPLOAD_URL')
+RECRUITMENT_STATUS_PATH = os.getenv('RECRUITMENT_STATUS_PATH')
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 
 # Configure logging
@@ -46,8 +52,6 @@ lock = threading.Lock()
 # Create the DbHandler instance
 db_handler = DbHandler(MAIN_DB_PATH, NOT_NEUROTECH_DB_PATH)
 
-# ---------------------------------------------------------------------------
-# Helper function to create a scrollable frame
 def create_scrolled_frame(parent):
     """
     Creates a scrollable CTkFrame within a parent widget and returns
@@ -82,8 +86,6 @@ def create_scrolled_frame(parent):
 
     return container, inner_frame
 
-# ---------------------------------------------------------------------------
-# Core logic for file handling
 def process_file(filepath: str):
     """Processes a file and updates the loading file list."""
     try:
@@ -226,9 +228,6 @@ def export_updated_file():
     db_handler.export_updates(UPDATED_COMPANIES_PATH)
     messagebox.showinfo("Success", "Updated companies exported successfully!")
 
-# ---------------------------------------------------------------------------
-
-
 def upload_images_and_update_csv():
     """Opens the upload image GUI process."""
     folder = folder_path.get()
@@ -312,6 +311,18 @@ def update_csv_with_url(csv_file: str, company_name: str, image_url: str):
         writer.writeheader()
         writer.writerows(rows)
 
+def null_fun():
+    """Finds all the null rows in the data."""
+    find_nulls_for_company(MAIN_DB_PATH, NULL_DATA_PATH)
+
+def website_fun():
+    """Finds the status of websites."""
+    find_websites(MAIN_DB_PATH, WEBSITE_STATUS_PATH)   
+
+def career_fun():
+    """Finds the career information."""
+    find_career(MAIN_DB_PATH, RECRUITMENT_STATUS_PATH)
+
 # ---------------------------------------------------------------------------
 # Main GUI with Tabview
 ctk.set_appearance_mode("System")
@@ -381,6 +392,28 @@ loaded_container.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
 # Support drag-and-drop in the entire tab (or a sub-frame)
 file_tab.drop_target_register(DND_FILES)
 file_tab.dnd_bind('<<Drop>>', drop)
+
+# -- Bottom Frame for dataset operations/handling
+operations_frame = ctk.CTkFrame(file_tab)
+operations_frame.pack(fill="x", padx=10, pady=5)
+
+operations_label = ctk.CTkLabel(operations_frame, text="Dataset Operations:", anchor="w")
+operations_label.pack(fill="x", padx=5, pady=5)
+
+# Operational buttons
+
+export_updates_button = ctk.CTkButton(buttons_frame, text="Export Updated", command=export_updated_file)
+export_updates_button.pack(side="left", padx=5)
+
+website_search_button = ctk.CTkButton(operations_frame, text="Search Website", command=website_fun)
+website_search_button.pack(side="left", padx=5, pady=5)
+
+career_search_button = ctk.CTkButton(operations_frame, text="Search Career", command=career_fun)
+career_search_button.pack(side="left", padx=5, pady=5)
+
+null_search_button = ctk.CTkButton(operations_frame, text="Search Null's", command=null_fun)
+null_search_button.pack(side="left", padx=5, pady=5)
+
 
 # ===========================================================================
 # TAB 2: Image Upload
