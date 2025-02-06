@@ -9,6 +9,8 @@ __pycache__/
 
 # Secret files
 data
+jan25
+notebook.ipynb
 
 # Environment variables
 .env
