@@ -6,16 +6,18 @@ import unicodedata
 from datetime import datetime as dt
 import pandas as pd
 
+# ===========================================================================
+# Cleaners
+# ===========================================================================
 def clean_value(value):
     """Cleans the input value by stripping unwanted characters and converting to int if possible."""
     if pd.isna(value):
         return value
-    cleaned_value = str(value).strip('="')  # Remove extra characters
+    cleaned_value = str(value).strip('="')  # Remove unwanted characters
     try:
         return int(cleaned_value)
     except ValueError:
         return cleaned_value.strip()
-
 
 def clean_dataframe(filepath, file_type='csv'):
     """Reads a file into a DataFrame, cleans it, and returns the cleaned DataFrame."""
@@ -32,6 +34,10 @@ def escape_special_characters(name: str) -> str:
     """Replaces special characters in a filename with underscores to ensure compatibility."""
     return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
 
+# ===========================================================================
+# Class
+# ===========================================================================
+
 class DbHandler:
     """Handles a data files from tsun, cb, pb and others"""
 
@@ -43,15 +49,59 @@ class DbHandler:
         self.df = pd.DataFrame()
         self.new_companies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
         self.update_companies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
+        self.counter = 0
+        self.is_in_db_counter = 0
+
+
+# ===========================================================================
+# Operations
+# ===========================================================================
 
     def normalize(self, name: str) -> str:
+        """
+        Normalize company names to match them consistently across different data sources.
+        
+        This enhanced version:
+        - Converts the name to lowercase and trims whitespace.
+        - Applies Unicode normalization (NFKC).
+        - Removes punctuation and special characters.
+        - Strips common corporate suffixes (e.g., Inc, Corp, Ltd, LLC, etc.) that often lead to minor variations.
+        - Eliminates spaces and dashes to ensure a consistent string for matching.
+        """
         if not isinstance(name, str):
             return ''
+        
+        # Lowercase and trim
         normalized = name.casefold().strip()
+        
+        # Apply Unicode normalization
         normalized = unicodedata.normalize('NFKC', normalized)
-        normalized = re.sub(r'[\s\-]+', '', normalized)  # Remove spaces and dashes
-        normalized = re.sub(r'[^\w]', '', normalized, flags=re.UNICODE)  # Keep only alphanumeric characters
+        
+        # Remove punctuation and special characters (but keep spaces for now)
+        normalized = re.sub(r'[^\w\s]', '', normalized)
+        
+        # Remove common corporate suffixes (only if they occur at the end)
+        suffixes = [' incorporated', ' inc', ' corporation', ' corp', ' limited', ' ltd', ' llc']
+        for suffix in suffixes:
+            if normalized.endswith(suffix):
+                normalized = normalized[:-len(suffix)]
+        
+        # Remove all whitespace and dashes to get a compact representation
+        normalized = re.sub(r'[\s\-]+', '', normalized)
+        
         return normalized
+
+    def normalize_column_category(self, column_data):
+        """Normalizes the names in a given column of the DataFrame."""
+        return column_data.apply(lambda x: self.normalize(x) if isinstance(x, str) else '')
+
+    def normalize_employee_count(self, employee_str):
+        """Normalize employee string to a format suitable for comparison."""
+        if pd.isna(employee_str):
+            return None
+        employee_str = str(employee_str)
+        employee_str = re.sub(r'[^0-9-]', '', employee_str)
+        return employee_str.strip()
 
     def is_company_in_database(self, company_name, db):
         """Checks if a company (normalized) exists in the given database (case-insensitive)."""
@@ -74,10 +124,6 @@ class DbHandler:
 
         return normalized_name in all_names_set
 
-    def normalize_column_category(self, column_data):
-        """Normalizes the names in a given column of the DataFrame."""
-        return column_data.apply(lambda x: self.normalize(x) if isinstance(x, str) else '')
-    
     def get_updating_date(self):
         """Adds the current date to the 'Updating_Date' column for new companies."""
         current_date = dt.now().strftime("%d-%m-%Y")
@@ -90,28 +136,6 @@ class DbHandler:
                 lambda x: current_date if pd.isna(x) or x == '' else x
             )
     
-    def export_new(self, path):
-        """Exports new database to excel"""
-        if not path.lower().endswith('.xlsx'):
-            raise ValueError("File path must end with .xlsx")
-        self.get_updating_date()
-        self.new_companies_db.to_excel(path, index=False, engine='openpyxl')
-
-    def export_updates(self, path):
-        """Exports the updates database to an Excel file."""
-        if not path.lower().endswith('.xlsx'):
-            raise ValueError("File path must end with .xlsx")
-        
-        current_date = dt.now().strftime("%d-%m-%Y")
-        if 'Updating_Date' not in self.update_companies_db.columns:
-            self.update_companies_db['Updating_Date'] = current_date
-        else:
-            # Only update rows where 'Updating_Date' is NaN or empty
-            self.update_companies_db['Updating_Date'] = self.update_companies_db['Updating_Date'].apply(
-                lambda x: current_date if pd.isna(x) or x == '' else x
-            )
-        self.update_companies_db.to_excel(path, index=False, engine='openpyxl')
-
     def clear_new_db(self):
         """Clears new database"""
         self.new_companies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
@@ -129,11 +153,13 @@ class DbHandler:
             return False
         return all(col in self.df.columns for col in required_columns[data_type])
 
+# ===========================================================================
+# Search
+# ===========================================================================
+
     def start_searching_process(self, file_path: str, data_type: str):
-        """Start the searching process of the algorithm and remove duplicates."""
+        """Start the searching process and remove duplicates only for TSUN data."""
         self.df = clean_dataframe(file_path)
-        self.new_companies_db = pd.DataFrame(columns=self.main_db.columns.tolist())  # Reset
-        
         if data_type == 'tsun':
             self.find_new_companies_tsun()
         elif data_type == 'cb':
@@ -143,79 +169,106 @@ class DbHandler:
         else:
             self.find_new_companies_other()
 
-    def start_update_process(self, file_path: str, data_type: str):
-        """Start the updating process of the algortheim"""
-        self.df = clean_dataframe(file_path)
-        if data_type == 'tsun':
-            self.update_current_companies_tsun()
-        if data_type == 'cb':
-            self.update_current_companies_cb()
-
     def find_new_companies_tsun(self):
-        """Finds new companies from the TSUN dataset and ensures unique entries."""
-        tsun_companies = set(self.new_companies_db['Company Name'].apply(self.normalize).dropna())
-        
+        """Processes TSUN records and adds only companies that are not in main or not_neurotech."""
+        # Get the set of normalized names already added (force lowercase & stripped)
+        existing_new = set(
+            self.new_companies_db['Normalized_Company_Name']
+            .fillna('')
+            .str.lower()
+            .str.strip()
+        )
+    
         for _, row in self.df.iterrows():
-            company_name = clean_value(row['Name'])  # Ensure value is cleaned
-            if not isinstance(company_name, str) or company_name.strip() == "":
+            raw_name = str(row.get('Name', '')).strip()
+            if not raw_name:
                 continue
+
+            # Get normalized name (force lowercase and stripping)
+            norm_name = self.normalize(raw_name).lower().strip()
+
+            # Only proceed if the company is not in main and not in not_neurotech.
+            if self.is_company_in_database(raw_name, self.main_db) or self.is_company_in_database(raw_name, self.not_neurotech_db):
+                self.is_in_db_counter += 1
+                continue
+            if norm_name in existing_new:
+                continue
+
+            # Create new record from TSUN data.
+            new_entry = {
+                'Company Name': raw_name,
+                'Startup Nation Page': row.get('Finder URL', ''),
+                'Company Founded Year': row.get('Founded', ''),
+                'Company Number of Employees': row.get('Employees', ''),
+                'Funding Status': row.get('Funding Stage', ''),
+                'Description': row.get('Description', ''),
+                'Normalized_Company_Name': norm_name
+            }
+            self.new_companies_db = pd.concat(
+                [self.new_companies_db, pd.DataFrame([new_entry])],
+                ignore_index=True
+            )
+            existing_new.add(norm_name)
+            self.counter += 1
             
-            normalized_name = self.normalize(company_name)
-            is_in_main_db = self.is_company_in_database(company_name, self.main_db)
-            is_in_not_neurotech = self.is_company_in_database(company_name, self.not_neurotech_db)
-
-            if normalized_name not in tsun_companies and not is_in_main_db and not is_in_not_neurotech:
-                new_entry = {
-                    'Company Name': company_name,
-                    'Startup Nation Page': row['Finder URL'],
-                    'Company Founded Year': row['Founded'],
-                    'Company Number of Employees': row['Employees'],
-                    'Funding Status': row['Funding Stage'],
-                    'Description': row['Description']
-                }
-                self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
-                tsun_companies.add(normalized_name)  # Ensure it’s not re-added
-
     def find_new_companies_cb(self):
-        """Finds new companies from Crunchbase while ensuring no duplicates and merging with TSUN data if applicable."""
+        """Processes Crunchbase records:
+        - If a matching TSUN record exists (by normalized name), update its Crunchbase fields.
+        - Otherwise, add a new record only if the company is not in main and not in not_neurotech.
+        """
+        # Ensure our new companies already have the normalized field forced to lowercase.
+        if 'Normalized_Company_Name' not in self.new_companies_db.columns:
+            self.new_companies_db['Normalized_Company_Name'] = self.new_companies_db['Company Name'].apply(
+                lambda x: self.normalize(x).lower().strip() if isinstance(x, str) else ''
+            )
         
-        if 'Company Name' in self.new_companies_db.columns:
-            self.new_companies_db['Normalized_Company_Name'] = self.new_companies_db['Company Name'].apply(self.normalize)
-
         for _, row in self.df.iterrows():
-            company_name = clean_value(row['Organization Name'])
-            if not isinstance(company_name, str) or company_name.strip() == "":
+            raw_name = str(row.get('Organization Name', '')).strip()
+            if not raw_name:
                 continue
 
-            normalized_name = self.normalize(company_name)
+            norm_name = self.normalize(raw_name).lower().strip()
+            
+            # If the company exists in main or not_neurotech, skip completely.
+            if self.is_company_in_database(raw_name, self.main_db) or self.is_company_in_database(raw_name, self.not_neurotech_db):
+                self.is_in_db_counter += 1
+                continue
 
-            # Check if company already exists in `new_companies_db` (from TSUN)
-            if normalized_name in set(self.new_companies_db['Normalized_Company_Name']):
-                idx = self.new_companies_db[self.new_companies_db['Normalized_Company_Name'] == normalized_name].index[0]
-
-                # Update missing CB columns while keeping existing TSUN data
-                self.new_companies_db.loc[idx, 'CB (Crunchbase) Link'] = row.get('Organization Name URL', self.new_companies_db.loc[idx, 'CB (Crunchbase) Link'])
-                self.new_companies_db.loc[idx, 'Company CB Rank'] = row.get('CB Rank (Company)', self.new_companies_db.loc[idx, 'Company CB Rank'])
-                self.new_companies_db.loc[idx, 'Company_Location'] = row.get('Headquarters Location', self.new_companies_db.loc[idx, 'Company_Location'])
-                self.new_companies_db.loc[idx, 'Full Description'] = row.get('Full Description', self.new_companies_db.loc[idx, 'Full Description'])
-                self.new_companies_db.loc[idx, 'Company Founded Year'] = row.get('Founded Date', self.new_companies_db.loc[idx, 'Company Founded Year'])
-
+            # Look for an existing TSUN record by normalized name.
+            existing_entry = self.new_companies_db[
+                self.new_companies_db['Normalized_Company_Name'].fillna('').str.lower().str.strip() == norm_name
+            ]
+            
+            if not existing_entry.empty:
+                # Update existing TSUN record with Crunchbase fields.
+                idx = existing_entry.index[0]
+                if pd.notna(row.get('Organization Name URL')):
+                    self.new_companies_db.at[idx, 'CB (Crunchbase) Link'] = row['Organization Name URL']
+                if pd.notna(row.get('CB Rank (Company)')):
+                    self.new_companies_db.at[idx, 'Company CB Rank'] = row['CB Rank (Company)']
+                if pd.notna(row.get('Headquarters Location')):
+                    self.new_companies_db.at[idx, 'Company_Location'] = row['Headquarters Location']
+                if pd.notna(row.get('Full Description')):
+                    self.new_companies_db.at[idx, 'Full Description'] = row['Full Description']
+                if pd.notna(row.get('Founded Date')):
+                    self.new_companies_db.at[idx, 'Company Founded Year'] = row['Founded Date']
             else:
-                # If not in TSUN, check against `main_db` and `not_neurotech_db`
-                is_in_main_db = self.is_company_in_database(company_name, self.main_db)
-                is_in_not_neurotech = self.is_company_in_database(company_name, self.not_neurotech_db)
+                # If no matching TSUN record, add a new record (only if not in main/not_neurotech)
+                new_record = {
+                    'Company Name': raw_name,
+                    'CB (Crunchbase) Link': row.get('Organization Name URL', ''),
+                    'Company Founded Year': row.get('Founded Date', ''),
+                    'Company_Location': row.get('Headquarters Location', ''),
+                    'Full Description': row.get('Full Description', ''),
+                    'Company CB Rank': row.get('CB Rank (Company)', ''),
+                    'Normalized_Company_Name': norm_name
+                }
+                self.new_companies_db = pd.concat(
+                    [self.new_companies_db, pd.DataFrame([new_record])],
+                    ignore_index=True
+                )
+                self.counter += 1
 
-                if not is_in_main_db and not is_in_not_neurotech:
-                    new_entry = {
-                        'Company Name': company_name,
-                        'CB (Crunchbase) Link': row.get('Organization Name URL', ''),
-                        'Company Founded Year': row.get('Founded Date', ''),
-                        'Company_Location': row.get('Headquarters Location', ''),
-                        'Description': row.get('Description', ''),
-                        'Full Description': row.get('Full Description', ''),
-                        'Company CB Rank': row.get('CB Rank (Company)', '')
-                    }
-                    self.new_companies_db = pd.concat([self.new_companies_db, pd.DataFrame([new_entry])], ignore_index=True)
 
     def find_new_companies_pb(self):
         """Findes new compnies from pitchbook """
@@ -225,13 +278,17 @@ class DbHandler:
         """Handles other data"""
         print("handle_other")
         
-    def normalize_employee_count(self, employee_str):
-        """Normalize employee string to a format suitable for comparison."""
-        if pd.isna(employee_str):
-            return None
-        employee_str = str(employee_str)
-        employee_str = re.sub(r'[^0-9-]', '', employee_str)
-        return employee_str.strip()
+# ===========================================================================
+# Update
+# ===========================================================================
+
+    def start_update_process(self, file_path: str, data_type: str):
+        """Start the updating process of the algortheim"""
+        self.df = clean_dataframe(file_path)
+        if data_type == 'tsun':
+            self.update_current_companies_tsun()
+        if data_type == 'cb':
+            self.update_current_companies_cb()
 
     def update_current_companies_tsun(self):
         """Updates current companies from tsun, focusing on the employees column."""
@@ -299,4 +356,30 @@ class DbHandler:
     def update_current_compnies_pb(self):
         """Updates current compnies from pb"""
         pass
-    
+
+# ===========================================================================
+# Exports
+# ===========================================================================
+
+    def export_new(self, path):
+        """Exports new database to excel"""
+        if not path.lower().endswith('.xlsx'):
+            raise ValueError("File path must end with .xlsx")
+        self.get_updating_date()
+        print(f"in_db: {self.is_in_db_counter}, added: {self.counter}")
+        self.new_companies_db.to_excel(path, index=False, engine='openpyxl')
+
+    def export_updates(self, path):
+        """Exports the updates database to an Excel file."""
+        if not path.lower().endswith('.xlsx'):
+            raise ValueError("File path must end with .xlsx")
+        
+        current_date = dt.now().strftime("%d-%m-%Y")
+        if 'Updating_Date' not in self.update_companies_db.columns:
+            self.update_companies_db['Updating_Date'] = current_date
+        else:
+            # Only update rows where 'Updating_Date' is NaN or empty
+            self.update_companies_db['Updating_Date'] = self.update_companies_db['Updating_Date'].apply(
+                lambda x: current_date if pd.isna(x) or x == '' else x
+            )
+        self.update_companies_db.to_excel(path, index=False, engine='openpyxl')
