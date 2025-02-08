@@ -51,8 +51,7 @@ class DbHandler:
         self.update_companies_db = pd.DataFrame(columns=self.main_db.columns.tolist())
         self.counter = 0
         self.is_in_db_counter = 0
-
-
+        
 # ===========================================================================
 # Operations
 # ===========================================================================
@@ -170,105 +169,110 @@ class DbHandler:
             self.find_new_companies_other()
 
     def find_new_companies_tsun(self):
-        """Processes TSUN records and adds only companies that are not in main or not_neurotech."""
-        # Get the set of normalized names already added (force lowercase & stripped)
-        existing_new = set(
-            self.new_companies_db['Normalized_Company_Name']
-            .fillna('')
-            .str.lower()
-            .str.strip()
-        )
-    
+        """
+        Processes TSUN records:
+        - If the company exists in main_db or not_neurotech_db, it is skipped.
+        - If the company exists in new_companies_db, update the missing TSUN-specific fields:
+                'Startup Nation Page', 'Company Number of Employees', 'Funding Status', and 'Description'.
+        - Otherwise, add a new row containing all TSUN data.
+        """
+        # Ensure TSUN-specific columns exist in new_companies_db.
+        tsun_columns = ['Startup Nation Page', 'Company Number of Employees', 'Funding Status', 'Description']
+        for col in tsun_columns:
+            if col not in self.new_companies_db.columns:
+                self.new_companies_db[col] = ''
+
         for _, row in self.df.iterrows():
             raw_name = str(row.get('Name', '')).strip()
             if not raw_name:
                 continue
 
-            # Get normalized name (force lowercase and stripping)
-            norm_name = self.normalize(raw_name).lower().strip()
-
-            # Only proceed if the company is not in main and not in not_neurotech.
+            # Skip companies present in main_db or not_neurotech_db.
             if self.is_company_in_database(raw_name, self.main_db) or self.is_company_in_database(raw_name, self.not_neurotech_db):
                 self.is_in_db_counter += 1
                 continue
-            if norm_name in existing_new:
-                continue
 
-            # Create new record from TSUN data.
-            new_entry = {
+            # Prepare the TSUN data.
+            tsun_data = {
                 'Company Name': raw_name,
                 'Startup Nation Page': row.get('Finder URL', ''),
-                'Company Founded Year': row.get('Founded', ''),
                 'Company Number of Employees': row.get('Employees', ''),
                 'Funding Status': row.get('Funding Stage', ''),
-                'Description': row.get('Description', ''),
-                'Normalized_Company_Name': norm_name
+                'Description': row.get('Description', '')
             }
-            self.new_companies_db = pd.concat(
-                [self.new_companies_db, pd.DataFrame([new_entry])],
-                ignore_index=True
-            )
-            existing_new.add(norm_name)
-            self.counter += 1
-            
+            normalized_name = self.normalize(raw_name)
+            tsun_data['Normalized_Company_Name'] = normalized_name
+
+            if self.is_company_in_database(raw_name, self.new_companies_db):
+                # Update the TSUN fields in the existing new_companies_db row if they are missing.
+                mask = self.new_companies_db['Normalized_Company_Name'] == normalized_name
+                if mask.any():
+                    idx = self.new_companies_db[mask].index[0]
+                    for field in tsun_columns:
+                        new_value = tsun_data[field]
+                        current_value = self.new_companies_db.at[idx, field]
+                        if new_value and (pd.isna(current_value) or current_value == ''):
+                            self.new_companies_db.at[idx, field] = new_value
+            else:
+                # Add a new row with all TSUN information.
+                self.new_companies_db = pd.concat(
+                    [self.new_companies_db, pd.DataFrame([tsun_data])],
+                    ignore_index=True
+                )
+                self.counter += 1
+
     def find_new_companies_cb(self):
-        """Processes Crunchbase records:
-        - If a matching TSUN record exists (by normalized name), update its Crunchbase fields.
-        - Otherwise, add a new record only if the company is not in main and not in not_neurotech.
         """
-        # Ensure our new companies already have the normalized field forced to lowercase.
-        if 'Normalized_Company_Name' not in self.new_companies_db.columns:
-            self.new_companies_db['Normalized_Company_Name'] = self.new_companies_db['Company Name'].apply(
-                lambda x: self.normalize(x).lower().strip() if isinstance(x, str) else ''
-            )
-        
+        Processes Crunchbase (CB) records:
+        - If the company exists in main_db or not_neurotech_db, it is skipped.
+        - If the company exists in new_companies_db, update the missing CB-specific fields:
+                'CB (Crunchbase) Link', 'Company_Location', 'Full Description', and 'Company CB Rank'.
+        - Otherwise, add a new row containing all CB data.
+        """
+        # Ensure CB-specific columns exist in new_companies_db.
+        cb_columns = ['CB (Crunchbase) Link', 'Company_Location', 'Full Description', 'Company CB Rank']
+        for col in cb_columns:
+            if col not in self.new_companies_db.columns:
+                self.new_companies_db[col] = ''
+
         for _, row in self.df.iterrows():
             raw_name = str(row.get('Organization Name', '')).strip()
             if not raw_name:
                 continue
 
-            norm_name = self.normalize(raw_name).lower().strip()
-            
-            # If the company exists in main or not_neurotech, skip completely.
+            # Skip companies present in main_db or not_neurotech_db.
             if self.is_company_in_database(raw_name, self.main_db) or self.is_company_in_database(raw_name, self.not_neurotech_db):
                 self.is_in_db_counter += 1
                 continue
 
-            # Look for an existing TSUN record by normalized name.
-            existing_entry = self.new_companies_db[
-                self.new_companies_db['Normalized_Company_Name'].fillna('').str.lower().str.strip() == norm_name
-            ]
-            
-            if not existing_entry.empty:
-                # Update existing TSUN record with Crunchbase fields.
-                idx = existing_entry.index[0]
-                if pd.notna(row.get('Organization Name URL')):
-                    self.new_companies_db.at[idx, 'CB (Crunchbase) Link'] = row['Organization Name URL']
-                if pd.notna(row.get('CB Rank (Company)')):
-                    self.new_companies_db.at[idx, 'Company CB Rank'] = row['CB Rank (Company)']
-                if pd.notna(row.get('Headquarters Location')):
-                    self.new_companies_db.at[idx, 'Company_Location'] = row['Headquarters Location']
-                if pd.notna(row.get('Full Description')):
-                    self.new_companies_db.at[idx, 'Full Description'] = row['Full Description']
-                if pd.notna(row.get('Founded Date')):
-                    self.new_companies_db.at[idx, 'Company Founded Year'] = row['Founded Date']
+            # Prepare the CB data.
+            cb_data = {
+                'Company Name': raw_name,
+                'CB (Crunchbase) Link': row.get('Organization Name URL', ''),
+                'Company_Location': row.get('Headquarters Location', ''),
+                'Full Description': row.get('Full Description', ''),
+                'Company CB Rank': row.get('CB Rank (Company)', '')
+            }
+            normalized_name = self.normalize(raw_name)
+            cb_data['Normalized_Company_Name'] = normalized_name
+
+            if self.is_company_in_database(raw_name, self.new_companies_db):
+                # Update the CB fields in the existing new_companies_db row if they are missing.
+                mask = self.new_companies_db['Normalized_Company_Name'] == normalized_name
+                if mask.any():
+                    idx = self.new_companies_db[mask].index[0]
+                    for field in cb_columns:
+                        new_value = cb_data[field]
+                        current_value = self.new_companies_db.at[idx, field]
+                        if new_value and (pd.isna(current_value) or current_value == ''):
+                            self.new_companies_db.at[idx, field] = new_value
             else:
-                # If no matching TSUN record, add a new record (only if not in main/not_neurotech)
-                new_record = {
-                    'Company Name': raw_name,
-                    'CB (Crunchbase) Link': row.get('Organization Name URL', ''),
-                    'Company Founded Year': row.get('Founded Date', ''),
-                    'Company_Location': row.get('Headquarters Location', ''),
-                    'Full Description': row.get('Full Description', ''),
-                    'Company CB Rank': row.get('CB Rank (Company)', ''),
-                    'Normalized_Company_Name': norm_name
-                }
+                # Add a new row with all CB information.
                 self.new_companies_db = pd.concat(
-                    [self.new_companies_db, pd.DataFrame([new_record])],
+                    [self.new_companies_db, pd.DataFrame([cb_data])],
                     ignore_index=True
                 )
                 self.counter += 1
-
 
     def find_new_companies_pb(self):
         """Findes new compnies from pitchbook """
