@@ -27,7 +27,7 @@ def clean_dataframe(filepath, file_type='csv'):
     if 'former company names' in df.columns:
         df['former company names'] = df['former company names'].astype(str)
     for col in df.columns:
-        df[col] = df[col].apply(clean_value)
+        df[col] = df[col].apply(clean_value) #TODO: check if apply(escape special characters) is needed more!
     return df
 
 def escape_special_characters(name: str) -> str:
@@ -58,37 +58,33 @@ class DbHandler:
 
     def normalize(self, name: str) -> str:
         """
-        Normalize company names to match them consistently across different data sources.
-        
-        This enhanced version:
-        - Converts the name to lowercase and trims whitespace.
-        - Applies Unicode normalization (NFKC).
-        - Removes punctuation and special characters.
-        - Strips common corporate suffixes (e.g., Inc, Corp, Ltd, LLC, etc.) that often lead to minor variations.
-        - Eliminates spaces and dashes to ensure a consistent string for matching.
-        """
+        Normalize company names to match them consistently across different data sources."""
         if not isinstance(name, str):
             return ''
         
-        # Lowercase and trim
+        # Lowercase and trim whitespace.
         normalized = name.casefold().strip()
         
-        # Apply Unicode normalization
+        # Apply Unicode normalization.
         normalized = unicodedata.normalize('NFKC', normalized)
         
-        # Remove punctuation and special characters (but keep spaces for now)
+        # Remove punctuation and special characters (but keep spaces for now).
         normalized = re.sub(r'[^\w\s]', '', normalized)
         
-        # Remove common corporate suffixes (only if they occur at the end)
+        # Collapse multiple spaces into a single space.
+        normalized = re.sub(r'\s+', ' ', normalized)
+        
+        # Remove common corporate suffixes (only if they occur at the end).
         suffixes = [' incorporated', ' inc', ' corporation', ' corp', ' limited', ' ltd', ' llc']
         for suffix in suffixes:
             if normalized.endswith(suffix):
                 normalized = normalized[:-len(suffix)]
         
-        # Remove all whitespace and dashes to get a compact representation
-        normalized = re.sub(r'[\s\-]+', '', normalized)
+        # Remove all remaining whitespace and dashes for a compact representation.
+        normalized = re.sub(r'[\s\-_]+', '', normalized)
         
         return normalized
+
 
     def normalize_column_category(self, column_data):
         """Normalizes the names in a given column of the DataFrame."""
@@ -198,7 +194,8 @@ class DbHandler:
                 'Startup Nation Page': row.get('Finder URL', ''),
                 'Company Number of Employees': row.get('Employees', ''),
                 'Funding Status': row.get('Funding Stage', ''),
-                'Description': row.get('Description', '')
+                'Description': row.get('Description', ''),
+                'Company Founded Year': row.get('Founded', '')
             }
             normalized_name = self.normalize(raw_name)
             tsun_data['Normalized_Company_Name'] = normalized_name
@@ -230,7 +227,7 @@ class DbHandler:
         - Otherwise, add a new row containing all CB data.
         """
         # Ensure CB-specific columns exist in new_companies_db.
-        cb_columns = ['CB (Crunchbase) Link', 'Company_Location', 'Full Description', 'Company CB Rank']
+        cb_columns = ['CB (Crunchbase) Link', 'Company Location', 'Full Description', 'Company CB Rank']
         for col in cb_columns:
             if col not in self.new_companies_db.columns:
                 self.new_companies_db[col] = ''
@@ -249,9 +246,11 @@ class DbHandler:
             cb_data = {
                 'Company Name': raw_name,
                 'CB (Crunchbase) Link': row.get('Organization Name URL', ''),
-                'Company_Location': row.get('Headquarters Location', ''),
+                'Company Location': row.get('Headquarters Location', ''),
                 'Full Description': row.get('Full Description', ''),
-                'Company CB Rank': row.get('CB Rank (Company)', '')
+                'Company CB Rank': row.get('CB Rank (Company)', ''),
+                'Company CB Categories': row.get('Industries', ''),
+                'Company Founded Year': row.get('Founded Date', '')
             }
             normalized_name = self.normalize(raw_name)
             cb_data['Normalized_Company_Name'] = normalized_name

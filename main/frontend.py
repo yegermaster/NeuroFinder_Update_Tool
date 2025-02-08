@@ -365,8 +365,6 @@ final_upload_button.pack(side="left", padx=5)
 export_new_companies_button = ctk.CTkButton(buttons_frame, text="Export New", command=export_loaded_files)
 export_new_companies_button.pack(side="left", padx=5)
 
-export_updates_button = ctk.CTkButton(buttons_frame, text="Export Updated", command=export_updated_file)
-export_updates_button.pack(side="left", padx=5)
 
 # -- Middle Frame for the two scrollable columns
 lists_frame = ctk.CTkFrame(file_tab)
